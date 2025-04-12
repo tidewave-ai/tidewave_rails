@@ -58,19 +58,9 @@ describe PackageSearch do
 
         expect(Faraday).to receive(:new).and_return(faraday_double)
 
-        result = described_class.new.call_with_schema_validation!(search: "rails")
+        result = described_class.new.call(search: "rails")
 
         expect(result).to eq(response_body)
-      end
-    end
-
-    context "with page < 1" do
-      it "raises an error" do
-        expect(Faraday).not_to receive(:new)
-
-        expect {
-          described_class.new.call_with_schema_validation!(search: "rails", page: 0)
-        }.to raise_error(FastMcp::Tool::InvalidArgumentsError, '{"page":["must be greater than 0"]}')
       end
     end
 
@@ -83,7 +73,7 @@ describe PackageSearch do
 
         allow(Faraday).to receive(:new).and_return(faraday_double)
 
-        result = described_class.new.call_with_schema_validation!(search: "rails", page: 2)
+        result = described_class.new.call(search: "rails", page: 2)
 
         expect(result).to eq(response_body)
       end

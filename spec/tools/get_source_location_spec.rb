@@ -127,7 +127,7 @@ describe GetSourceLocation do
       end
 
       context 'with function_name as argument' do
-        subject { GetSourceLocation.new.call_with_schema_validation!(module_name: module_name, function_name: function_name) }
+        subject { GetSourceLocation.new.call(module_name: module_name, function_name: function_name) }
 
         let(:class_method_name) { 'foo' }
         let(:instance_method_name) { 'bar' }

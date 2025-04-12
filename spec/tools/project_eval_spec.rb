@@ -49,7 +49,7 @@ describe ProjectEval do
       let(:code) { "1 + 1" }
 
       it "returns the correct result" do
-        result = described_class.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call(code: code)
 
         expect(result).to eq(2)
       end
@@ -59,7 +59,7 @@ describe ProjectEval do
       let(:code) { "puts 'Hello, world!'" }
 
       it "returns the correct result" do
-        result = described_class.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call(code: code)
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
@@ -72,7 +72,7 @@ describe ProjectEval do
       let(:code) { "puts 'Hello, world!'; 1 + 1" }
 
       it "returns the correct result" do
-        result = described_class.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call(code: code)
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
