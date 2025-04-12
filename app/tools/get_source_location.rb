@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "active_support/core_ext/string/inflections"
+require "active_support/core_ext/object/blank"
+
 class GetSourceLocation < ApplicationTool
   class << self
     # The version of Ruby that this tool is compatible with is 3.4.0 and above.
@@ -60,7 +63,12 @@ class GetSourceLocation < ApplicationTool
   private
 
   def get_source_location(module_name, function_name)
-    module_ref = module_name.constantize
+    begin
+      module_ref = module_name.constantize
+    rescue NameError
+      raise NameError, "Module #{module_name} not found"
+    end
+
     return get_method_definition(module_ref, function_name) if function_name.present?
 
     module_ref.const_source_location(module_name)
