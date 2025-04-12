@@ -1,13 +1,13 @@
 describe ProjectEval do
   describe "#tool_name" do
     it "returns the correct tool name" do
-      expect(ProjectEval.tool_name).to eq("project_eval")
+      expect(described_class.tool_name).to eq("project_eval")
     end
   end
 
   describe "#description" do
     it "returns the correct description" do
-      expect(ProjectEval.description).to eq(
+      expect(described_class.description).to eq(
         <<~DESCRIPTION
           Evaluates Ruby code in the context of the project.
 
@@ -36,7 +36,7 @@ describe ProjectEval do
     end
 
     it "returns the correct input schema" do
-      expect(ProjectEval.input_schema_to_json).to eq(expected_input_schema)
+      expect(described_class.input_schema_to_json).to eq(expected_input_schema)
     end
   end
 
@@ -47,7 +47,7 @@ describe ProjectEval do
       let(:code) { "1 + 1" }
 
       it "returns the correct result" do
-        result = ProjectEval.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call_with_schema_validation!(code: code)
 
         expect(result).to eq(2)
       end
@@ -57,7 +57,7 @@ describe ProjectEval do
       let(:code) { "puts 'Hello, world!'" }
 
       it "returns the correct result" do
-        result = ProjectEval.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call_with_schema_validation!(code: code)
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
@@ -70,7 +70,7 @@ describe ProjectEval do
       let(:code) { "puts 'Hello, world!'; 1 + 1" }
 
       it "returns the correct result" do
-        result = ProjectEval.new.call_with_schema_validation!(code: code)
+        result = described_class.new.call_with_schema_validation!(code: code)
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
