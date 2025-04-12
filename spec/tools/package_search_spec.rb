@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 describe PackageSearch do
-  describe "#tool_name" do
+  describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("package_search")
     end
   end
 
-  describe "#description" do
+  describe ".description" do
     it "returns the correct description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
@@ -22,7 +22,7 @@ describe PackageSearch do
     end
   end
 
-  describe "#input_schema_to_json" do
+  describe ".input_schema_to_json" do
     let(:expected_input_schema) do
       {
         properties: {

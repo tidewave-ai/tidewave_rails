@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 describe GetSourceLocation do
-  describe "#tool_name" do
+  describe ".tool_name" do
     it "returns the correct tool name" do
       expect(GetSourceLocation.tool_name).to eq("get_source_location")
     end
   end
 
-  describe "#ruby_version_compatible_label" do
+  describe ".ruby_version_compatible_label" do
     context "when Ruby version is compatible" do
       it "returns the correct label" do
         allow(GetSourceLocation).to receive(:ruby_version_compatible?).and_return(true)
@@ -23,7 +23,7 @@ describe GetSourceLocation do
     end
   end
 
-  describe "#ruby_version_compatible?" do
+  describe ".ruby_version_compatible?" do
     context "when Ruby version is compatible" do
       it "returns true" do
         allow(GetSourceLocation).to receive(:ruby_version).and_return('3.4.0')
@@ -39,7 +39,7 @@ describe GetSourceLocation do
     end
   end
 
-  describe "#description" do
+  describe ".description" do
     let(:description) do
       <<~DESCRIPTION
         Returns the source location for the given module (or function).
