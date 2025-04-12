@@ -14,7 +14,8 @@ module Tidewave
         version: Tidewave::VERSION,
         path_prefix: "/tidewave",
         messages_route: "messages",
-        sse_route: "mcp"
+        sse_route: "mcp",
+        logger: Logger.new(STDOUT)
       ) do |server|
         app.config.after_initialize do
           # First, load and register the precoded tools from the gem

@@ -7,7 +7,7 @@
 require "fast_mcp"
 
 # The Tidewave gem provides:
-# 1. Automatic integration with the Model Context Protocol through the fast-mcpgem
+# 1. Automatic integration with the Model Context Protocol through the fast-mcp gem
 # 2. A collection of precoded AI tools ready to use with your application
 # 3. Automatic discovery of your custom tools in app/tools
 #
@@ -20,6 +20,7 @@ require "fast_mcp"
 #  messages_route: "messages",
 #  sse_route: "sse"
 #
-# For more details, see the FastMcp documentation: https://github.com/yjacquin/fast-mcp
+# For more details, see the Tidewave documentation: https://github.com/tidewave-ai/tidewave_rails
+# Or the FastMcp documentation: https://github.com/yjacquin/fast-mcp
 
 # You can add your own initialization code here if needed
