@@ -17,6 +17,7 @@
 # See https://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 
 require 'bundler/setup'
+require 'pry'
 require 'fast_mcp'
 
 $LOAD_PATH.unshift File.expand_path('../../app', __FILE__)
