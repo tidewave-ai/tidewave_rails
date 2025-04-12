@@ -5,3 +5,4 @@
 /tmp/
 /*.gem
 /lib/.DS_Store
+/*.*.md
