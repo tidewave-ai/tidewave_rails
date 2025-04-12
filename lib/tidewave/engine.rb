@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Tidewave
   class Engine < ::Rails::Engine
     isolate_namespace Tidewave

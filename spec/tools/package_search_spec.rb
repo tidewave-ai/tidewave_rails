@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe PackageSearch do
   describe "#tool_name" do
     it "returns the correct tool name" do
