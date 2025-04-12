@@ -1,0 +1,3 @@
+module Tidewave
+  VERSION = "0.1.0"
+end
