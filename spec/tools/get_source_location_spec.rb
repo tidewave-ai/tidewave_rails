@@ -7,38 +7,6 @@ describe GetSourceLocation do
     end
   end
 
-  describe ".ruby_version_compatible_label" do
-    context "when Ruby version is compatible" do
-      it "returns the correct label" do
-        allow(GetSourceLocation).to receive(:ruby_version_compatible?).and_return(true)
-        expect(GetSourceLocation.ruby_version_compatible_label).to eq("compatible")
-      end
-    end
-
-    context "when Ruby version is not compatible" do
-      it "returns the correct label" do
-        allow(GetSourceLocation).to receive(:ruby_version_compatible?).and_return(false)
-        expect(GetSourceLocation.ruby_version_compatible_label).to eq("incompatible")
-      end
-    end
-  end
-
-  describe ".ruby_version_compatible?" do
-    context "when Ruby version is compatible" do
-      it "returns true" do
-        allow(GetSourceLocation).to receive(:ruby_version).and_return('3.4.0')
-        expect(GetSourceLocation.ruby_version_compatible?).to eq(true)
-      end
-    end
-
-    context "when Ruby version is not compatible" do
-      it "returns false" do
-        allow(GetSourceLocation).to receive(:ruby_version).and_return('3.3.0')
-        expect(GetSourceLocation.ruby_version_compatible?).to eq(false)
-      end
-    end
-  end
-
   describe ".description" do
     let(:description) do
       <<~DESCRIPTION
@@ -48,18 +16,11 @@ describe GetSourceLocation do
 
         This tool only works if you know the specific module (and optionally function) that is being targeted.
         If that is the case, prefer this tool over grepping the file system.
-
-        ## Ruby version compatibility
-        Due to a Ruby bug, this tool only works with Ruby >= 3.4.0.
-        Your ruby version is compatible with this tool.
       DESCRIPTION
     end
 
-    context "when Ruby version is compatible" do
-      it "returns the correct description" do
-        allow(GetSourceLocation).to receive(:ruby_version_compatible?).and_return(true)
-        expect(GetSourceLocation.description).to eq(description)
-      end
+    it "returns the correct description" do
+      expect(GetSourceLocation.description).to eq(description)
     end
   end
 
