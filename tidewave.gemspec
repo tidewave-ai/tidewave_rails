@@ -25,6 +25,6 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 7.2.0"
-  spec.add_dependency "fast-mcp", "~> 1.0.0"
+  spec.add_dependency "fast-mcp", "~> 1.1.0"
   spec.add_dependency "faraday", "~> 2.13.0"
 end
