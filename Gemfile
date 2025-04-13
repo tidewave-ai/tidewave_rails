@@ -18,6 +18,6 @@ gem "rubocop-rails-omakase", require: false
 # gem "debug", ">= 1.0.0"
 
 group :development, :test do
-  gem "rspec"
+  gem "rspec-rails"
   gem "pry"
 end

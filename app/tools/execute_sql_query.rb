@@ -29,25 +29,21 @@ class ExecuteSqlQuery < ApplicationTool
     # Execute the query with arguments and limit to 50 rows
     limit_query = ensure_row_limit(query)
 
-    begin
-      # Execute the query with prepared statement and arguments
-      if arguments.any?
-        result = conn.exec_query(limit_query, "SQL", arguments)
-      else
-        result = conn.exec_query(limit_query)
-      end
-
-      # Format the result
-      {
-        columns: result.columns,
-        rows: result.rows,
-        row_count: result.rows.length,
-        adapter: conn.adapter_name,
-        database: conn.current_database
-      }
-    rescue => e
-      { error: e.message }
+    # Execute the query with prepared statement and arguments
+    if arguments.any?
+      result = conn.exec_query(limit_query, "SQL", arguments)
+    else
+      result = conn.exec_query(limit_query)
     end
+
+    # Format the result
+    {
+      columns: result.columns,
+      rows: result.rows,
+      row_count: result.rows.length,
+      adapter: conn.adapter_name,
+      database: conn.current_database
+    }
   end
 
   private
