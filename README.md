@@ -1,28 +1,20 @@
-# Tidewave
-Short description and motivation.
-
-## Usage
-How to use my plugin.
+# Tidewave 🌊
 
 ## Installation
-Add this line to your application's Gemfile:
+- Clone this repo to the desired path
+- Add the gem to your Gemfile by referencing the path:
+`gem 'tidewave', path: '/path/to/the/cloned/repo'`
 
-```ruby
-gem "tidewave"
-```
+## Usage
+I have tested it againt the official MCP inspector ATM:
+`npx @modelcontextprotocol/inspector`
 
-And then execute:
-```bash
-$ bundle
-```
+Launch your rails server on port other than 3000 (as MCP inspector's proxy runs on 3000):
+`bundle exec rails s -p 3001`
 
-Or install it yourself as:
-```bash
-$ gem install tidewave
-```
+Then, access the inspector's UI, choose SSE protocol, and for the URL, enter: `http://localhost:3001/tidewave/sse`
 
-## Contributing
-Contribution directions go here.
+_I am aware we want to use `/tidewave/mcp`, I just need to publish the new gem version for this feature, it will be done soon._
 
-## License
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+## Cursor tests
+I have encountered errors while trying it out with Cursor, I will debug this ASAP.
