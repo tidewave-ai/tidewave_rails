@@ -2,7 +2,7 @@
 
 require "faraday"
 
-class PackageSearch < ApplicationTool
+class PackageSearch < Tidewave::Tool
   tool_name "package_search"
   description <<~DESCRIPTION
     Searches for packages on RubyGems.

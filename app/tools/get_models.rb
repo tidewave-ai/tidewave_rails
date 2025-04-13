@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class GetModels < ApplicationTool
+class GetModels < Tidewave::Tool
   tool_name "get_models"
   description <<~DESCRIPTION
     Returns a list of all models in the application and their relationships.

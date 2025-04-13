@@ -3,6 +3,7 @@
 require "fast_mcp"
 require "logger"
 require "fileutils"
+require "tidewave/tool"
 
 module Tidewave
   class Railtie < Rails::Railtie
@@ -18,18 +19,10 @@ module Tidewave
         logger: Logger.new(STDOUT)
       ) do |server|
         app.config.after_initialize do
-          # First, load and register the precoded tools from the gem
+          # Load and register the precoded tools from the gem
           gem_tools_path = File.expand_path("../../app/tools/**/*.rb", __dir__)
           Dir[gem_tools_path].each { |f| require f }
-
-          # Then, load tools from the host application
-          app_tools_path = Rails.root.join("app", "tools", "**", "*.rb")
-          Dir[app_tools_path].each { |f| require f }
-
-          # Register all tools with the MCP server
-          if defined?(ApplicationTool)
-            server.register_tools(*ApplicationTool.descendants)
-          end
+          server.register_tools(*Tidewave::Tool.descendants)
         end
       end
     end

@@ -19,6 +19,7 @@
 require 'bundler/setup'
 require 'pry'
 require 'fast_mcp'
+require 'tidewave/tool'
 
 $LOAD_PATH.unshift File.expand_path('../../app', __FILE__)
 Dir[File.expand_path('../../app/tools/**/*.rb', __FILE__)].each { |f| require f }

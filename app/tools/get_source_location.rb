@@ -3,7 +3,7 @@
 require "active_support/core_ext/string/inflections"
 require "active_support/core_ext/object/blank"
 
-class GetSourceLocation < ApplicationTool
+class GetSourceLocation < Tidewave::Tool
   tool_name "get_source_location"
 
 

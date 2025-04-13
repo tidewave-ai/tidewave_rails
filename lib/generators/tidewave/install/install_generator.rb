@@ -9,13 +9,6 @@ module Tidewave
 
       desc "Installs Tidewave MCP server into your Rails application"
 
-      def check_fast_mcp_installed
-        unless defined?(FastMcp)
-          say "Fast MCP gem is required. Please run 'bundle add fast-mcp' first.", :red
-          exit
-        end
-      end
-
       def create_initializer
         template "tidewave_initializer.rb", "config/initializers/tidewave.rb"
       end
