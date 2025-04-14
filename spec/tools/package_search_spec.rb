@@ -14,7 +14,8 @@ describe PackageSearch do
           Searches for packages on RubyGems.
 
           Use this tool if you need to find new packages to add to the project. Before using this tool,
-          get an overview of the existing dependencies by using the `project_eval` tool and executing `Mix.Project.deps_apps()`.
+          get an overview of the existing dependencies by using the `project_eval` tool and executing
+          `Gem::Specification.map { |gem| [gem.name, gem.version] }`.
 
           The results are paginated, with 30 packages per page. Use the `page` parameter to fetch a specific page.
         DESCRIPTION
