@@ -22,42 +22,27 @@ class ExecuteSqlQuery < Tidewave::Tool
     optional(:arguments).value(:array).description("The arguments to pass to the query. The query must contain corresponding parameter placeholders.")
   end
 
+  RESULT_LIMIT = 50
+
   def call(query:, arguments: [])
     # Get the ActiveRecord connection
     conn = ActiveRecord::Base.connection
 
-    # Execute the query with arguments and limit to 50 rows
-    limit_query = ensure_row_limit(query)
-
     # Execute the query with prepared statement and arguments
     if arguments.any?
-      result = conn.exec_query(limit_query, "SQL", arguments)
+      result = conn.exec_query(query, "SQL", arguments)
     else
-      result = conn.exec_query(limit_query)
+      result = conn.exec_query(query)
     end
+
 
     # Format the result
     {
-      columns: result.columns,
-      rows: result.rows,
+      columns: result.columns.first(RESULT_LIMIT),
+      rows: result.rows.first(RESULT_LIMIT),
       row_count: result.rows.length,
       adapter: conn.adapter_name,
-      database: conn.current_database
+      database: Rails.configuration.database_configuration.dig(Rails.env, "database")
     }
-  end
-
-  private
-
-  def ensure_row_limit(query)
-    # Don't modify queries that already have a LIMIT
-    return query if query.upcase.include?("LIMIT ")
-
-    # Add LIMIT 50 to the query, being careful about semicolons
-    if query.strip.end_with?(";")
-      # Insert the LIMIT before the semicolon
-      query.sub(/;$/, " LIMIT 50;")
-    else
-      "#{query} LIMIT 50"
-    end
   end
 end

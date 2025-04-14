@@ -56,50 +56,55 @@ describe ExecuteSqlQuery do
   describe "#call" do
     let(:connection) { instance_double("ActiveRecord::ConnectionAdapters::PostgreSQLAdapter") }
     let(:result) { instance_double("ActiveRecord::Result") }
+    let(:row_count) { 60 }
+    let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
 
     before do
       allow(ActiveRecord::Base).to receive(:connection).and_return(connection)
       allow(connection).to receive(:adapter_name).and_return("PostgreSQL")
-      allow(connection).to receive(:current_database).and_return("test_db")
+      allow(Rails).to receive_message_chain(:configuration, :database_configuration).and_return({
+        "test" => {
+          "database" => ":memory:"
+        }
+        })
       allow(result).to receive(:columns).and_return([ "id", "name" ])
-      allow(result).to receive(:rows).and_return([ [ 1, "Test" ], [ 2, "Example" ] ])
+      allow(result).to receive(:rows).and_return(rows)
     end
 
     context "with a simple query without arguments" do
       let(:query) { "SELECT * FROM users" }
 
-      it "adds LIMIT 50 and executes the query" do
-        expect(connection).to receive(:exec_query).with("SELECT * FROM users LIMIT 50").and_return(result)
+      it "returns the first 50 rows of the query" do
+        expect(connection).to receive(:exec_query).with(query).and_return(result)
 
         response = described_class.new.call(query: query)
 
         expect(response).to eq({
           columns: [ "id", "name" ],
-          rows: [ [ 1, "Test" ], [ 2, "Example" ] ],
-          row_count: 2,
+          rows: rows.first(50),
+          row_count: row_count,
           adapter: "PostgreSQL",
-          database: "test_db"
+          database: ":memory:"
         })
       end
-    end
 
-    context "with a query that already has a LIMIT" do
-      let(:query) { "SELECT * FROM users LIMIT 10" }
+      context 'with a row_count smaller than the result limit' do
+        let(:row_count) { 10 }
+        let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
 
-      it "does not add another LIMIT" do
-        expect(connection).to receive(:exec_query).with(query).and_return(result)
+        it "returns the first 50 rows of the query" do
+          expect(connection).to receive(:exec_query).with(query).and_return(result)
 
-        described_class.new.call(query: query)
-      end
-    end
+          response = described_class.new.call(query: query)
 
-    context "with a query that ends with a semicolon" do
-      let(:query) { "SELECT * FROM users;" }
-
-      it "adds LIMIT before the semicolon" do
-        expect(connection).to receive(:exec_query).with("SELECT * FROM users LIMIT 50;").and_return(result)
-
-        described_class.new.call(query: query)
+          expect(response).to eq({
+            columns: [ "id", "name" ],
+            rows: rows,
+            row_count: row_count,
+            adapter: "PostgreSQL",
+            database: ":memory:"
+          })
+        end
       end
     end
 
@@ -108,7 +113,7 @@ describe ExecuteSqlQuery do
       let(:arguments) { [ 1 ] }
 
       it "passes the arguments to the exec_query method" do
-        expect(connection).to receive(:exec_query).with("SELECT * FROM users WHERE id = $1 LIMIT 50", "SQL", arguments).and_return(result)
+        expect(connection).to receive(:exec_query).with(query, "SQL", arguments).and_return(result)
 
         described_class.new.call(query: query, arguments: arguments)
       end
