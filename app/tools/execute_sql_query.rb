@@ -38,7 +38,7 @@ class ExecuteSqlQuery < Tidewave::Tool
 
     # Format the result
     {
-      columns: result.columns.first(RESULT_LIMIT),
+      columns: result.columns,
       rows: result.rows.first(RESULT_LIMIT),
       row_count: result.rows.length,
       adapter: conn.adapter_name,
