@@ -8,6 +8,9 @@ require "tidewave/tools/base"
 module Tidewave
   class Railtie < Rails::Railtie
     initializer "tidewave.setup_mcp" do |app|
+      # Prevent MCP server from being mounted if Rails is not running in development mode
+      raise "For security reasons, Tidewave is only supported in development mode" unless Rails.env.development?
+
       # Set up MCP server with the host application
       FastMcp.mount_in_rails(
         app,
