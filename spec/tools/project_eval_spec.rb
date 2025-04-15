@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe ProjectEval do
+describe Tidewave::Tools::ProjectEval do
   describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("project_eval")

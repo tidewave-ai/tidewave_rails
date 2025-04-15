@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe GetModels do
+describe Tidewave::Tools::GetModels do
   describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("get_models")

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-describe GetSourceLocation do
+describe Tidewave::Tools::GetSourceLocation do
   describe ".tool_name" do
     it "returns the correct tool name" do
-      expect(GetSourceLocation.tool_name).to eq("get_source_location")
+      expect(described_class.tool_name).to eq("get_source_location")
     end
   end
 
@@ -20,7 +20,7 @@ describe GetSourceLocation do
     end
 
     it "returns the correct description" do
-      expect(GetSourceLocation.description).to eq(description)
+      expect(described_class.description).to eq(description)
     end
   end
 
@@ -49,7 +49,7 @@ describe GetSourceLocation do
 
   describe "#call" do
     context 'with module_name as argument' do
-      subject { GetSourceLocation.new.call_with_schema_validation!(module_name: module_name) }
+      subject { described_class.new.call_with_schema_validation!(module_name: module_name) }
 
       let(:module_name) { 'TidewaveTestModule' }
       let(:foo_line_number) { __LINE__ + 3 }
@@ -88,7 +88,7 @@ describe GetSourceLocation do
       end
 
       context 'with function_name as argument' do
-        subject { GetSourceLocation.new.call(module_name: module_name, function_name: function_name) }
+        subject { described_class.new.call(module_name: module_name, function_name: function_name) }
 
         let(:class_method_name) { 'foo' }
         let(:instance_method_name) { 'bar' }

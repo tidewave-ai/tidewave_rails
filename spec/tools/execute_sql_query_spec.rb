@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe ExecuteSqlQuery do
+describe Tidewave::Tools::ExecuteSqlQuery do
   describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("execute_sql_query")

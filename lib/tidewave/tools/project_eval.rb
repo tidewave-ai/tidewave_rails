@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class ProjectEval < Tidewave::Tool
+class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
   tool_name "project_eval"
   description <<~DESCRIPTION
     Evaluates Ruby code in the context of the project.

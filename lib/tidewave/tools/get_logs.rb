@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class GetLogs < Tidewave::Tool
+class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
   tool_name "get_logs"
   description <<~DESCRIPTION
     Returns all log output, excluding logs that were caused by other tool calls.

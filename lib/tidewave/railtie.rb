@@ -3,7 +3,7 @@
 require "fast_mcp"
 require "logger"
 require "fileutils"
-require "tidewave/tool"
+require "tidewave/tools/base"
 
 module Tidewave
   class Railtie < Rails::Railtie
@@ -20,9 +20,9 @@ module Tidewave
       ) do |server|
         app.config.after_initialize do
           # Load and register the precoded tools from the gem
-          gem_tools_path = File.expand_path("../../app/tools/**/*.rb", __dir__)
+          gem_tools_path = File.expand_path("../../lib/tidewave/tools/**/*.rb", __dir__)
           Dir[gem_tools_path].each { |f| require f }
-          server.register_tools(*Tidewave::Tool.descendants)
+          server.register_tools(*Tidewave::Tools::Base.descendants)
         end
       end
     end

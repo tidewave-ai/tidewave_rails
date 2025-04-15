@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class ExecuteSqlQuery < Tidewave::Tool
+class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
   tool_name "execute_sql_query"
   description <<~DESCRIPTION
     Executes the given SQL query against the ActiveRecord database connection.
