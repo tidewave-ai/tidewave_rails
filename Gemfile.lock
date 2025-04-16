@@ -204,8 +204,6 @@ GEM
     psych (5.2.3)
       date
       stringio
-    puma (6.6.0)
-      nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.1.12)
     rack-session (2.1.0)
@@ -298,13 +296,6 @@ GEM
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
-    sprockets (4.2.1)
-      concurrent-ruby (~> 1.0)
-      rack (>= 2.2.4, < 4)
-    sprockets-rails (3.5.2)
-      actionpack (>= 6.1)
-      activesupport (>= 6.1)
-      sprockets (>= 3.0.0)
     sqlite3 (2.6.0-aarch64-linux-gnu)
     sqlite3 (2.6.0-aarch64-linux-musl)
     sqlite3 (2.6.0-arm-linux-gnu)
@@ -341,10 +332,8 @@ PLATFORMS
 
 DEPENDENCIES
   pry
-  puma
   rspec-rails
   rubocop-rails-omakase
-  sprockets-rails
   sqlite3
   tidewave!
 
