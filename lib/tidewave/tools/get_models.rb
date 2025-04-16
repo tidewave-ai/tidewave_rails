@@ -6,20 +6,12 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     Returns a list of all models in the application and their relationships.
   DESCRIPTION
 
-  arguments do
-    optional(:association_type).filled(:string, included_in?: %w[has_many has_one belongs_to]).description(
-      "The type of association to include in the response. Can be 'has_many', 'has_one' or 'belongs_to'. If omitted, all association types will be included."
-    )
-  end
-
-  def call(association_type: nil)
-    association_type_as_symbol = association_type&.to_sym
-
+  def call
     # Ensure all models are loaded
     Rails.application.eager_load!
 
     models = ActiveRecord::Base.descendants.map do |model|
-      { name: model.name, relationships: get_relationships(model, association_type_as_symbol) }
+      { name: model.name, relationships: get_relationships(model) }
     end
 
     models.to_json
@@ -27,8 +19,8 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
 
   private
 
-  def get_relationships(model, association_type)
-    model.reflect_on_all_associations(association_type).map do |association|
+  def get_relationships(model)
+    model.reflect_on_all_associations.map do |association|
       { name: association.name, type: association.macro }
     end.compact_blank
   end
