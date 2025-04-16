@@ -18,23 +18,30 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
 
   def call(code:)
     original_stdout = $stdout
-    output_capture = StringIO.new
-    $stdout = output_capture
+    original_stderr = $stderr
+
+    stdout_capture = StringIO.new
+    stderr_capture = StringIO.new
+    $stdout = stdout_capture
+    $stderr = stderr_capture
 
     begin
       result = eval(code)
-      stdout = output_capture.string
+      stdout = stdout_capture.string
+      stderr = stderr_capture.string
 
-      if stdout.empty?
+      if stdout.empty? && stderr.empty?
         result
       else
         {
           stdout: stdout,
+          stderr: stderr,
           result: result
         }
       end
     ensure
       $stdout = original_stdout
+      $stderr = original_stderr
     end
   end
 end

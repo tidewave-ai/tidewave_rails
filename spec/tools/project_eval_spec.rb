@@ -63,19 +63,35 @@ describe Tidewave::Tools::ProjectEval do
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
+          stderr: "",
           result: nil
         })
       end
     end
 
-    context 'with code writing to stdout and returning a value' do
-      let(:code) { "puts 'Hello, world!'; 1 + 1" }
+    context 'with code writing to stderr' do
+      let(:code) { "warn 'Hello, world!'" }
+
+      it "returns the correct result" do
+        result = described_class.new.call(code: code)
+
+        expect(result).to eq({
+          stdout: "",
+          stderr: "Hello, world!\n",
+          result: nil
+        })
+      end
+    end
+
+    context 'with code writing to stdout, stderr and returning a value' do
+      let(:code) { "puts 'Hello, world!'; warn 'How you doin?'; 1 + 1" }
 
       it "returns the correct result" do
         result = described_class.new.call(code: code)
 
         expect(result).to eq({
           stdout: "Hello, world!\n",
+          stderr: "How you doin?\n",
           result: 2
         })
       end
