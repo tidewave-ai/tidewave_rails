@@ -77,14 +77,29 @@ describe Tidewave::Tools::ReadProjectFile do
       end
     end
 
-    context "when the file path is outside the project directory" do
+    context "when the file path starts with '..'" do
+      let(:higher_path) { "../../../etc/passwd" }
+
       before do
-        malicious_path = "../../../etc/passwd"
+        allow(File).to receive(:join).with(git_root, higher_path).and_return("/etc/passwd")
+      end
+
+      it "raises an ArgumentError" do
+        expect { subject.call(path: higher_path) }.to raise_error(
+          ArgumentError, "File path must not start with '..'"
+        )
+      end
+    end
+
+    context "when the file path starts with '..'" do
+      let(:malicious_path) { "/Users/sth/etc/passwd" }
+
+      before do
         allow(File).to receive(:join).with(git_root, malicious_path).and_return("/etc/passwd")
       end
 
       it "raises an ArgumentError" do
-        expect { subject.call(path: "../../../etc/passwd") }.to raise_error(
+        expect { subject.call(path: malicious_path) }.to raise_error(
           ArgumentError, "File path must be within the project directory"
         )
       end
