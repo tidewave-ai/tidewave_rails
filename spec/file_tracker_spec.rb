@@ -74,11 +74,8 @@ describe Tidewave::FileTracker do
 
   describe '.project_files' do
     before do
-      # Stub the git repository check
-      allow(described_class).to receive(:system).with("git rev-parse --is-inside-work-tree > /dev/null 2>&1").and_return(true)
-
       # Stub git root directory
-      allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").and_return("/path/to/repo\n")
+      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
 
       # Stub Dir.chdir to execute the block directly without changing directory
       allow(Dir).to receive(:chdir).and_yield
@@ -95,6 +92,129 @@ describe Tidewave::FileTracker do
     it "returns both tracked and untracked files" do
       expected_files = [ "file1.rb", "file2.rb", "file3.rb" ]
       expect(described_class.project_files).to match_array(expected_files)
+    end
+  end
+
+  describe '.git_root' do
+    it 'returns the git root directory' do
+      allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").and_return("/path/to/repo\n")
+      expect(described_class.git_root).to eq("/path/to/repo")
+    end
+
+    it 'caches the git root directory' do
+      allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").once.and_return("/path/to/repo\n")
+
+      # Call it twice
+      described_class.git_root
+      described_class.git_root
+
+      # Should only execute the command once
+    end
+  end
+
+  describe '.file_full_path' do
+    it 'joins the git root with the given path' do
+      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
+      expect(described_class.file_full_path("test/file.rb")).to eq("/path/to/repo/test/file.rb")
+    end
+  end
+
+  describe '.validate_path_access!' do
+    before do
+      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
+      allow(File).to receive(:exist?).and_return(true)
+    end
+
+    it 'raises an error if path starts with ..' do
+      expect {
+        described_class.validate_path_access!("../outside/file.rb")
+      }.to raise_error(ArgumentError, "File path must not start with '..'")
+    end
+
+    it 'raises an error if file is outside project directory' do
+      allow(described_class).to receive(:file_full_path).with("hacked/path").and_return("/outside/path/to/repo")
+
+      expect {
+        described_class.validate_path_access!("hacked/path")
+      }.to raise_error(ArgumentError, "File path must be within the project directory")
+    end
+
+    it 'raises an error if file does not exist' do
+      allow(described_class).to receive(:file_full_path).with("missing/file.rb").and_return("/path/to/repo/missing/file.rb")
+      allow(File).to receive(:exist?).with("/path/to/repo/missing/file.rb").and_return(false)
+
+      expect {
+        described_class.validate_path_access!("missing/file.rb")
+      }.to raise_error(ArgumentError, "File not found: missing/file.rb")
+    end
+
+    it 'returns the path if valid' do
+      allow(described_class).to receive(:file_full_path).with("valid/file.rb").and_return("/path/to/repo/valid/file.rb")
+      allow(File).to receive(:exist?).with("/path/to/repo/valid/file.rb").and_return(true)
+
+      expect(described_class.validate_path_access!("valid/file.rb")).to eq("valid/file.rb")
+    end
+  end
+
+  describe '.read_file' do
+    let(:test_path) { 'test/file.rb' }
+    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:file_content) { 'file content' }
+
+    before do
+      allow(described_class).to receive(:validate_path_access!).with(test_path).and_return(test_path)
+      allow(described_class).to receive(:file_full_path).with(test_path).and_return(full_path)
+      allow(described_class).to receive(:record_read)
+      allow(File).to receive(:read).with(full_path).and_return(file_content)
+    end
+
+    it 'validates the path access' do
+      expect(described_class).to receive(:validate_path_access!).with(test_path)
+      described_class.read_file(test_path)
+    end
+
+    it 'records the file as read' do
+      expect(described_class).to receive(:record_read).with(test_path)
+      described_class.read_file(test_path)
+    end
+
+    it 'reads and returns the file contents' do
+      expect(described_class.read_file(test_path)).to eq(file_content)
+    end
+  end
+
+  describe '.write_file' do
+    let(:test_path) { 'test/file.rb' }
+    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:file_content) { 'new file content' }
+    let(:dirname) { '/path/to/repo/test' }
+
+    before do
+      allow(described_class).to receive(:file_full_path).with(test_path).and_return(full_path)
+      allow(described_class).to receive(:record_read)
+      allow(File).to receive(:dirname).with(full_path).and_return(dirname)
+      allow(FileUtils).to receive(:mkdir_p)
+      allow(File).to receive(:write)
+    end
+
+    it 'gets the full file path' do
+      expect(described_class).to receive(:file_full_path).with(test_path)
+      described_class.write_file(test_path, file_content)
+    end
+
+    it 'records the file as read' do
+      expect(described_class).to receive(:record_read).with(test_path)
+      described_class.write_file(test_path, file_content)
+    end
+
+    it 'creates the directory if it does not exist' do
+      expect(FileUtils).to receive(:mkdir_p).with(dirname)
+      described_class.write_file(test_path, file_content)
+    end
+
+    it 'writes the content to the file' do
+      expect(File).to receive(:write).with(full_path, file_content)
+      described_class.write_file(test_path, file_content)
     end
   end
 end

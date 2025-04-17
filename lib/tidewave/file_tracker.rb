@@ -5,9 +5,6 @@ module Tidewave
     extend self
 
     def project_files
-      # Get git root directory
-      git_root = `git rev-parse --show-toplevel`.strip
-
       # Change to git root directory to ensure git commands work properly
       Dir.chdir(git_root) do
         # Get tracked files
@@ -19,6 +16,59 @@ module Tidewave
         # Combine both sets of files
         tracked_files + untracked_files
       end
+    end
+
+    def read_file(path)
+      validate_path_access!(path)
+
+
+      # Retrieve the full path
+      full_path = file_full_path(path)
+
+      # Record the file as read
+      record_read(path)
+
+      # Read and return the file contents
+      File.read(full_path)
+    end
+
+    def write_file(path, content)
+      # Retrieve the full path
+      full_path = file_full_path(path)
+
+      # Record the file as read
+      record_read(path)
+
+      dirname = File.dirname(full_path)
+
+      # Create the directory if it doesn't exist
+      FileUtils.mkdir_p(dirname)
+
+      # Write the file contents
+      File.write(full_path, content)
+    end
+
+    def file_full_path(path)
+      File.join(git_root, path)
+    end
+
+    def git_root
+      @git_root ||= `git rev-parse --show-toplevel`.strip
+    end
+
+    def validate_path_access!(path)
+      raise ArgumentError, "File path must not start with '..'" if path.start_with?("..")
+
+      # Ensure the path is within the project
+      full_path = file_full_path(path)
+
+      # Verify the file is within the project directory
+      raise ArgumentError, "File path must be within the project directory" unless full_path.start_with?(git_root)
+
+      # Verify the file exists
+      raise ArgumentError, "File not found: #{path}" unless File.exist?(full_path)
+
+      path
     end
 
     # Record when a file was read
