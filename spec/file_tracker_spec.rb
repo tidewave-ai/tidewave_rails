@@ -37,6 +37,37 @@ describe Tidewave::FileTracker do
     end
   end
 
+  describe '.file_not_read?' do
+    let(:test_path) { 'test/path/file.rb' }
+    let(:unread_path) { 'unread/path/file.rb' }
+
+    before do
+      described_class.record_read(test_path)
+    end
+
+    it 'returns false for a file that has been read' do
+      expect(described_class.file_not_read?(test_path)).to be false
+    end
+  end
+
+  describe '.file_exists?' do
+    let(:existing_path) { 'test/path/file.rb' }
+    let(:path_that_does_not_exist) { 'unread/path/file.rb' }
+
+    it 'returns true for a file that exists' do
+      expect(File).to receive(:exist?).with(described_class.file_full_path(existing_path)).and_return(true)
+
+      expect(described_class.file_exists?(existing_path)).to be true
+    end
+
+    it 'returns false for a file that does not exist' do
+      expect(File).to receive(:exist?).with(described_class.file_full_path(path_that_does_not_exist)).and_return(false)
+
+      expect(described_class.file_exists?(path_that_does_not_exist)).to be false
+    end
+  end
+
+
   describe '.last_read_at' do
     let(:test_path) { 'test/path/file.rb' }
     let(:unread_path) { 'unread/path/file.rb' }
@@ -96,19 +127,29 @@ describe Tidewave::FileTracker do
   end
 
   describe '.git_root' do
+    before do
+      # Reset the memoized git_root to force the command to be called
+      described_class.instance_variable_set(:@git_root, nil)
+    end
+
     it 'returns the git root directory' do
       allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").and_return("/path/to/repo\n")
       expect(described_class.git_root).to eq("/path/to/repo")
     end
 
     it 'caches the git root directory' do
+      # We need to ensure the stubbing happens before the first call
       allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").once.and_return("/path/to/repo\n")
 
       # Call it twice
-      described_class.git_root
-      described_class.git_root
+      result1 = described_class.git_root
+      result2 = described_class.git_root
 
-      # Should only execute the command once
+      # Both calls should return the same value
+      expect(result1).to eq("/path/to/repo")
+      expect(result2).to eq("/path/to/repo")
+
+      # Should only execute the command once (verified by the .once constraint above)
     end
   end
 
@@ -192,6 +233,7 @@ describe Tidewave::FileTracker do
     before do
       allow(described_class).to receive(:file_full_path).with(test_path).and_return(full_path)
       allow(described_class).to receive(:record_read)
+      allow(described_class).to receive(:validate_path_access!).with(test_path, validate_existence: false)
       allow(File).to receive(:dirname).with(full_path).and_return(dirname)
       allow(FileUtils).to receive(:mkdir_p)
       allow(File).to receive(:write)

@@ -33,16 +33,17 @@ module Tidewave
     end
 
     def write_file(path, content)
+      validate_path_access!(path, validate_existence: false)
       # Retrieve the full path
       full_path = file_full_path(path)
-
-      # Record the file as read
-      record_read(path)
 
       dirname = File.dirname(full_path)
 
       # Create the directory if it doesn't exist
       FileUtils.mkdir_p(dirname)
+
+      # Record the file as read
+      record_read(path)
 
       # Write the file contents
       File.write(full_path, content)
@@ -56,7 +57,7 @@ module Tidewave
       @git_root ||= `git rev-parse --show-toplevel`.strip
     end
 
-    def validate_path_access!(path)
+    def validate_path_access!(path, validate_existence: true)
       raise ArgumentError, "File path must not start with '..'" if path.start_with?("..")
 
       # Ensure the path is within the project
@@ -66,7 +67,7 @@ module Tidewave
       raise ArgumentError, "File path must be within the project directory" unless full_path.start_with?(git_root)
 
       # Verify the file exists
-      raise ArgumentError, "File not found: #{path}" unless File.exist?(full_path)
+      raise ArgumentError, "File not found: #{path}" unless File.exist?(full_path) && validate_existence
 
       path
     end
@@ -76,9 +77,19 @@ module Tidewave
       file_records[path] = Time.now
     end
 
+    # Check if a file has not been read
+    def file_not_read?(path)
+      !file_read?(path)
+    end
+
     # Check if a file has been read
     def file_read?(path)
       file_records.key?(path)
+    end
+
+    # Check if a file exists
+    def file_exists?(path)
+      File.exist?(file_full_path(path))
     end
 
     # Get the timestamp when a file was last read
