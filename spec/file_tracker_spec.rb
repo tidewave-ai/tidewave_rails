@@ -106,25 +106,15 @@ describe Tidewave::FileTracker do
   end
 
   describe '.project_files' do
+    let(:git_root) { "/path/to/repo" }
     before do
       # Stub git root directory
-      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
-
-      # Stub Dir.chdir to execute the block directly without changing directory
-      allow(Dir).to receive(:chdir).and_yield
-
-      # Stub git ls-files for tracked files
-      tracked_files = "file1.rb\nfile2.rb\n"
-      allow(described_class).to receive(:`).with("git ls-files").and_return(tracked_files)
-
-      # Stub git ls-files for untracked files
-      untracked_files = "file3.rb\n"
-      allow(described_class).to receive(:`).with("git ls-files --others --exclude-standard").and_return(untracked_files)
+      allow(described_class).to receive(:git_root).and_return(git_root)
     end
 
-    it "returns both tracked and untracked files" do
-      expected_files = [ "file1.rb", "file2.rb", "file3.rb" ]
-      expect(described_class.project_files).to match_array(expected_files)
+    it "returns project files" do
+      allow(described_class).to receive(:`).with("git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard").and_return("file1.rb\nfile2.rb\n")
+      expect(described_class.project_files).to match_array([ "file1.rb", "file2.rb" ])
     end
   end
 

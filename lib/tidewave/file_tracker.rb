@@ -5,17 +5,7 @@ module Tidewave
     extend self
 
     def project_files
-      # Change to git root directory to ensure git commands work properly
-      Dir.chdir(git_root) do
-        # Get tracked files
-        tracked_files = `git ls-files`.split("\n")
-
-        # Get untracked files that aren't ignored
-        untracked_files = `git ls-files --others --exclude-standard`.split("\n")
-
-        # Combine both sets of files
-        tracked_files + untracked_files
-      end
+      `git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard`.split("\n")
     end
 
     def read_file(path)
