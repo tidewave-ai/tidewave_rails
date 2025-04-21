@@ -16,9 +16,7 @@ class Tidewave::Tools::WriteProjectFile < Tidewave::Tools::Base
   end
 
   def call(path:, content:)
-    if Tidewave::FileTracker.file_exists?(path) && Tidewave::FileTracker.file_not_read?(path)
-      raise ArgumentError, "File must be read first"
-    end
+    Tidewave::FileTracker.validate_path_is_writable!(path)
 
     Tidewave::FileTracker.write_file(path, content)
   end

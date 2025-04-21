@@ -29,13 +29,17 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
   end
 
   def call(path:, old_string:, new_string:)
-    Tidewave::FileTracker.validate_path_access!(path)
-
-    raise ArgumentError, "File must be read first" unless Tidewave::FileTracker.file_read?(path)
+    # Check if the file exists within the project root and has been read
+    Tidewave::FileTracker.validate_path_is_editable!(path)
 
     old_content = Tidewave::FileTracker.read_file(path)
 
-    new_content = old_content.gsub(old_string, new_string)
+    # Ensure old_string is unique within the file
+    scan_result = old_content.scan(old_string)
+    raise ArgumentError, "old_string is not found" if scan_result.empty?
+    raise ArgumentError, "old_string is not unique" if scan_result.size > 1
+
+    new_content = old_content.sub(old_string, new_string)
 
     Tidewave::FileTracker.write_file(path, new_content)
   end

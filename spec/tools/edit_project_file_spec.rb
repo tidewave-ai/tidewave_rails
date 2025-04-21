@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::EditProjectFile do
-  let(:tool) { described_class.new }
+  subject(:tool) { described_class.new }
+
   let(:path) { "test/file.rb" }
   let(:old_string) { "old content" }
   let(:new_string) { "new content" }
@@ -9,19 +10,14 @@ describe Tidewave::Tools::EditProjectFile do
   let(:expected_content) { "some before text\nnew content\nsome after text" }
 
   before do
-    allow(Tidewave::FileTracker).to receive(:validate_path_access!)
-    allow(Tidewave::FileTracker).to receive(:file_read?).and_return(true)
+    allow(Tidewave::FileTracker).to receive(:validate_path_is_editable!)
+    allow(Tidewave::FileTracker).to receive(:file_was_read?).and_return(true)
     allow(Tidewave::FileTracker).to receive(:read_file).and_return(file_content)
     allow(Tidewave::FileTracker).to receive(:write_file)
   end
 
-  it "validates the path access" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_access!).with(path)
-    tool.call(path: path, old_string: old_string, new_string: new_string)
-  end
-
-  it "checks if the file has been read" do
-    expect(Tidewave::FileTracker).to receive(:file_read?).with(path)
+  it "checks if the file is editable" do
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path)
     tool.call(path: path, old_string: old_string, new_string: new_string)
   end
 
@@ -35,8 +31,9 @@ describe Tidewave::Tools::EditProjectFile do
     tool.call(path: path, old_string: old_string, new_string: new_string)
   end
 
-  it "raises an error if the file has not been read" do
-    allow(Tidewave::FileTracker).to receive(:file_read?).with(path).and_return(false)
+  it "raises an error if the file is not editable" do
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path).and_raise(ArgumentError, "File must be read first")
+    expect(Tidewave::FileTracker).to receive(:write_file).never
 
     expect {
       tool.call(path: path, old_string: old_string, new_string: new_string)
@@ -89,15 +86,25 @@ describe Tidewave::Tools::EditProjectFile do
     end
   end
 
-  context "when multiple occurrences of the string exist" do
+  context "when multiple occurrences of the old_string exist" do
     let(:file_content) { "old content\nsome middle text\nold content" }
 
-    it "replaces all occurrences of the string" do
-      expect(Tidewave::FileTracker).to receive(:write_file) do |write_path, content|
-        expect(content).to eq("new content\nsome middle text\nnew content")
-      end
+    it "raises ArgumentError" do
+      expect(Tidewave::FileTracker).to receive(:write_file).never
 
-      tool.call(path: path, old_string: old_string, new_string: new_string)
+      expect { tool.call(path: path, old_string: old_string, new_string: new_string) }.to raise_error(ArgumentError, "old_string is not unique")
+    end
+  end
+
+  context "when there are no occurences of the old_string" do
+    let(:file_content) { "some before text\n\nsome after text" }
+    let(:old_string) { "old content" }
+    let(:new_string) { "new content" }
+
+    it "raises ArgumentError" do
+      expect(Tidewave::FileTracker).to receive(:write_file).never
+
+      expect { tool.call(path: path, old_string: old_string, new_string: new_string) }.to raise_error(ArgumentError, "old_string is not found")
     end
   end
 end

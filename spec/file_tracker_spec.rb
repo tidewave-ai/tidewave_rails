@@ -15,12 +15,12 @@ describe Tidewave::FileTracker do
 
       described_class.record_read(test_path)
 
-      expect(described_class.file_read?(test_path)).to be true
+      expect(described_class.file_was_read?(test_path)).to be true
       expect(described_class.last_read_at(test_path)).to eq freeze_time
     end
   end
 
-  describe '.file_read?' do
+  describe '.file_was_read?' do
     let(:test_path) { 'test/path/file.rb' }
     let(:unread_path) { 'unread/path/file.rb' }
 
@@ -29,24 +29,11 @@ describe Tidewave::FileTracker do
     end
 
     it 'returns true for a file that has been read' do
-      expect(described_class.file_read?(test_path)).to be true
+      expect(described_class.file_was_read?(test_path)).to be true
     end
 
     it 'returns false for a file that has not been read' do
-      expect(described_class.file_read?(unread_path)).to be false
-    end
-  end
-
-  describe '.file_not_read?' do
-    let(:test_path) { 'test/path/file.rb' }
-    let(:unread_path) { 'unread/path/file.rb' }
-
-    before do
-      described_class.record_read(test_path)
-    end
-
-    it 'returns false for a file that has been read' do
-      expect(described_class.file_not_read?(test_path)).to be false
+      expect(described_class.file_was_read?(unread_path)).to be false
     end
   end
 
@@ -87,6 +74,21 @@ describe Tidewave::FileTracker do
     end
   end
 
+  describe '.last_modified_at' do
+    let(:test_path) { 'test/path/file.rb' }
+    let(:full_path) { '/Users/sth/test/path/file.rb' }
+    let(:frozen_time) { Time.now }
+
+    before do
+      allow(described_class).to receive(:file_full_path).with(test_path).and_return(full_path)
+      allow(File).to receive(:mtime).with(full_path).and_return(frozen_time)
+    end
+
+    it 'returns the timestamp when a file was last modified' do
+      expect(described_class.last_modified_at(test_path)).to eq(frozen_time)
+    end
+  end
+
   describe '.reset' do
     let(:test_path) { 'test/path/file.rb' }
 
@@ -95,11 +97,11 @@ describe Tidewave::FileTracker do
     end
 
     it 'clears all tracked files' do
-      expect(described_class.file_read?(test_path)).to be true
+      expect(described_class.file_was_read?(test_path)).to be true
 
       described_class.reset
 
-      expect(described_class.file_read?(test_path)).to be false
+      expect(described_class.file_was_read?(test_path)).to be false
     end
   end
 
@@ -189,11 +191,118 @@ describe Tidewave::FileTracker do
       }.to raise_error(ArgumentError, "File not found: missing/file.rb")
     end
 
-    it 'returns the path if valid' do
+    it 'returns true if valid' do
       allow(described_class).to receive(:file_full_path).with("valid/file.rb").and_return("/path/to/repo/valid/file.rb")
       allow(File).to receive(:exist?).with("/path/to/repo/valid/file.rb").and_return(true)
 
-      expect(described_class.validate_path_access!("valid/file.rb")).to eq("valid/file.rb")
+      expect(described_class.validate_path_access!("valid/file.rb")).to be(true)
+    end
+  end
+
+  describe '.validate_path_is_editable!' do
+    let(:path) { "editable/file.rb" }
+
+    before do
+      allow(described_class).to receive(:validate_path_access!).with(path)
+      allow(described_class).to receive(:validate_path_has_been_read_since_last_write!).with(path)
+    end
+
+    it 'calls validate_path_access!' do
+      expect(described_class).to receive(:validate_path_access!).with(path)
+      described_class.validate_path_is_editable!(path)
+    end
+
+    it 'calls validate_path_has_been_read_since_last_write!' do
+      expect(described_class).to receive(:validate_path_has_been_read_since_last_write!).with(path)
+      described_class.validate_path_is_editable!(path)
+    end
+  end
+
+  describe '.validate_path_is_writable!' do
+    let(:path) { "editable/file.rb" }
+
+    before do
+      allow(described_class).to receive(:validate_path_access!).with(path, validate_existence: false)
+      allow(described_class).to receive(:validate_path_has_been_read_since_last_write!).with(path)
+    end
+
+    it 'calls validate_path_access!' do
+      expect(described_class).to receive(:validate_path_access!).with(path, validate_existence: false)
+      described_class.validate_path_is_writable!(path)
+    end
+
+    it 'calls validate_path_has_been_read_since_last_write!' do
+      expect(described_class).to receive(:validate_path_has_been_read_since_last_write!).with(path)
+      described_class.validate_path_is_writable!(path)
+    end
+  end
+
+  describe '.validate_path_has_been_read_since_last_write!' do
+    let(:path) { "editable/file.rb" }
+
+    before do
+      allow(described_class).to receive(:file_was_read_since_last_write?).with(path)
+    end
+
+    context 'when file_was_read_since_last_write? is true' do
+      it 'returns true' do
+        allow(described_class).to receive(:file_was_read_since_last_write?).with(path).and_return(true)
+        expect(described_class.validate_path_has_been_read_since_last_write!(path)).to be true
+      end
+    end
+
+    context 'when file_was_read_since_last_write? is false' do
+      it 'raises ArgumentError' do
+        allow(described_class).to receive(:file_was_read_since_last_write?).with(path).and_return(false)
+        expect { described_class.validate_path_has_been_read_since_last_write!(path) }.to raise_error(ArgumentError, "File has been modified since last read, please read the file again")
+      end
+    end
+  end
+
+  describe '.file_was_read_since_last_write?' do
+    let(:path) { "editable/file.rb" }
+
+    before do
+      allow(described_class).to receive(:file_was_read?).with(path).and_return(file_was_read)
+      allow(described_class).to receive(:last_read_at).with(path)
+      allow(described_class).to receive(:last_modified_at).with(path)
+    end
+
+    context 'when file_was_read? is true' do
+      let(:file_was_read) { true }
+      let(:frozen_time) { Time.now }
+
+      context 'when last_read_at is superior to last_modified_at' do
+        it 'returns true' do
+          allow(described_class).to receive(:last_read_at).with(path).and_return(frozen_time + 1)
+          allow(described_class).to receive(:last_modified_at).with(path).and_return(frozen_time)
+          expect(described_class.file_was_read_since_last_write?(path)).to be true
+        end
+      end
+      context 'when last_read_at is inferior to last_modified_at' do
+        it 'returns false' do
+          frozen_time = Time.now
+          allow(described_class).to receive(:last_read_at).with(path).and_return(frozen_time - 1)
+          allow(described_class).to receive(:last_modified_at).with(path).and_return(frozen_time)
+          expect(described_class.file_was_read_since_last_write?(path)).to be false
+        end
+      end
+
+      context 'when last_read_at is equal to last_modified_at' do
+        it 'returns true' do
+          allow(described_class).to receive(:last_read_at).with(path).and_return(frozen_time)
+          allow(described_class).to receive(:last_modified_at).with(path).and_return(frozen_time)
+          expect(described_class.file_was_read_since_last_write?(path)).to be true
+        end
+      end
+    end
+
+    context 'when file_was_read? is false' do
+      let(:file_was_read) { false }
+      it 'returns false' do
+        allow(described_class).to receive(:file_was_read?).with(path).and_return(false)
+        expect(described_class.file_was_read_since_last_write?(path)).to be false
+      end
     end
   end
 
@@ -235,8 +344,9 @@ describe Tidewave::FileTracker do
       allow(described_class).to receive(:record_read)
       allow(described_class).to receive(:validate_path_access!).with(test_path, validate_existence: false)
       allow(File).to receive(:dirname).with(full_path).and_return(dirname)
-      allow(FileUtils).to receive(:mkdir_p)
+      allow(FileUtils).to receive(:mkdir_p).with(dirname)
       allow(File).to receive(:write)
+      allow(described_class).to receive(:read_file).with(test_path)
     end
 
     it 'gets the full file path' do
@@ -244,18 +354,18 @@ describe Tidewave::FileTracker do
       described_class.write_file(test_path, file_content)
     end
 
-    it 'records the file as read' do
-      expect(described_class).to receive(:record_read).with(test_path)
-      described_class.write_file(test_path, file_content)
-    end
-
-    it 'creates the directory if it does not exist' do
+    it 'creates the directory' do
       expect(FileUtils).to receive(:mkdir_p).with(dirname)
       described_class.write_file(test_path, file_content)
     end
 
     it 'writes the content to the file' do
       expect(File).to receive(:write).with(full_path, file_content)
+      described_class.write_file(test_path, file_content)
+    end
+
+    it 'reads the file' do
+      expect(described_class).to receive(:read_file).with(test_path)
       described_class.write_file(test_path, file_content)
     end
   end

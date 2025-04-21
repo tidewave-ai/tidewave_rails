@@ -1,42 +1,23 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::WriteProjectFile do
-  let(:tool) { described_class.new }
+  subject(:tool) { described_class.new }
   let(:path) { "test/file.rb" }
   let(:content) { "new file content" }
 
   before do
-    allow(Tidewave::FileTracker).to receive(:file_exists?).and_return(true)
-    allow(Tidewave::FileTracker).to receive(:file_not_read?).and_return(false)
+    allow(Tidewave::FileTracker).to receive(:validate_path_is_writable!).and_return(true)
     allow(Tidewave::FileTracker).to receive(:write_file)
   end
 
-  it "checks if the file exists and hasn't been read" do
-    expect(Tidewave::FileTracker).to receive(:file_exists?).with(path)
-    expect(Tidewave::FileTracker).to receive(:file_not_read?).with(path)
+  it "validates the path is writable" do
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path)
     tool.call(path: path, content: content)
   end
 
   it "writes the content to the file" do
     expect(Tidewave::FileTracker).to receive(:write_file).with(path, content)
     tool.call(path: path, content: content)
-  end
-
-  it "raises an error if the file exists but has not been read" do
-    allow(Tidewave::FileTracker).to receive(:file_exists?).with(path).and_return(true)
-    allow(Tidewave::FileTracker).to receive(:file_not_read?).with(path).and_return(true)
-
-    expect {
-      tool.call(path: path, content: content)
-    }.to raise_error(ArgumentError, "File must be read first")
-  end
-
-  it "doesn't raise an error if the file doesn't exist" do
-    allow(Tidewave::FileTracker).to receive(:file_exists?).with(path).and_return(false)
-
-    expect {
-      tool.call(path: path, content: content)
-    }.not_to raise_error
   end
 
   context "when writing different types of content" do
@@ -63,8 +44,7 @@ describe Tidewave::Tools::WriteProjectFile do
     it "works with paths in subdirectories" do
       nested_path = "deeply/nested/directory/file.rb"
 
-      allow(Tidewave::FileTracker).to receive(:file_exists?).with(nested_path).and_return(true)
-      allow(Tidewave::FileTracker).to receive(:file_not_read?).with(nested_path).and_return(false)
+      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(nested_path)
       expect(Tidewave::FileTracker).to receive(:write_file).with(nested_path, content)
 
       tool.call(path: nested_path, content: content)
@@ -74,12 +54,21 @@ describe Tidewave::Tools::WriteProjectFile do
       different_extensions = [ "test.rb", "test.js", "test.html", "test.css", "test.md" ]
 
       different_extensions.each do |file_path|
-        allow(Tidewave::FileTracker).to receive(:file_exists?).with(file_path).and_return(true)
-        allow(Tidewave::FileTracker).to receive(:file_not_read?).with(file_path).and_return(false)
+        expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(file_path)
         expect(Tidewave::FileTracker).to receive(:write_file).with(file_path, content)
 
         tool.call(path: file_path, content: content)
       end
+    end
+  end
+
+  context "when validation fails" do
+    it "lets the validation error propagate" do
+      allow(Tidewave::FileTracker).to receive(:validate_path_is_writable!).and_raise(ArgumentError, "Validation failed")
+
+      expect {
+        tool.call(path: path, content: content)
+      }.to raise_error(ArgumentError, "Validation failed")
     end
   end
 end

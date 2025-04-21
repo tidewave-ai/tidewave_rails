@@ -21,7 +21,6 @@ module Tidewave
     def read_file(path)
       validate_path_access!(path)
 
-
       # Retrieve the full path
       full_path = file_full_path(path)
 
@@ -42,11 +41,11 @@ module Tidewave
       # Create the directory if it doesn't exist
       FileUtils.mkdir_p(dirname)
 
-      # Record the file as read
-      record_read(path)
-
       # Write the file contents
       File.write(full_path, content)
+
+      # Read and return the file contents
+      read_file(path)
     end
 
     def file_full_path(path)
@@ -69,7 +68,27 @@ module Tidewave
       # Verify the file exists
       raise ArgumentError, "File not found: #{path}" unless File.exist?(full_path) && validate_existence
 
-      path
+      true
+    end
+
+    def validate_path_is_editable!(path)
+      validate_path_access!(path)
+      validate_path_has_been_read_since_last_write!(path)
+
+      true
+    end
+
+    def validate_path_is_writable!(path)
+      validate_path_access!(path, validate_existence: false)
+      validate_path_has_been_read_since_last_write!(path)
+
+      true
+    end
+
+    def validate_path_has_been_read_since_last_write!(path)
+      raise ArgumentError, "File has been modified since last read, please read the file again" unless file_was_read_since_last_write?(path)
+
+      true
     end
 
     # Record when a file was read
@@ -77,13 +96,13 @@ module Tidewave
       file_records[path] = Time.now
     end
 
-    # Check if a file has not been read
-    def file_not_read?(path)
-      !file_read?(path)
+
+    def file_was_read_since_last_write?(path)
+      file_was_read?(path) && last_read_at(path) >= last_modified_at(path)
     end
 
     # Check if a file has been read
-    def file_read?(path)
+    def file_was_read?(path)
       file_records.key?(path)
     end
 
@@ -95,6 +114,10 @@ module Tidewave
     # Get the timestamp when a file was last read
     def last_read_at(path)
       file_records[path]
+    end
+
+    def last_modified_at(path)
+      File.mtime(file_full_path(path))
     end
 
     # Reset all tracked files (useful for testing)
