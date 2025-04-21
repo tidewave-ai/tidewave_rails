@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-describe Tidewave::Tools::Grep do
+describe Tidewave::Tools::GrepProjectFiles do
   describe '.tool_name' do
     it 'returns the tool name' do
-      expect(described_class.tool_name).to eq("grep")
+      expect(described_class.tool_name).to eq("grep_project_files")
     end
   end
 
@@ -73,12 +73,12 @@ describe Tidewave::Tools::Grep do
     let(:glob) { "**/*.rb" }
     let(:case_sensitive) { false }
     let(:max_results) { 100 }
-    let(:glob_tool) { instance_double(Tidewave::Tools::Glob) }
+    let(:glob_tool) { instance_double(Tidewave::Tools::GlobProjectFiles) }
     let(:file_matches) { [ "file1.rb", "file2.rb" ] }
     let(:file_content) { [ "line with test_pattern in it", "another line", "test_pattern here too" ] }
 
     before do
-      allow(Tidewave::Tools::Glob).to receive(:new).and_return(glob_tool)
+      allow(Tidewave::Tools::GlobProjectFiles).to receive(:new).and_return(glob_tool)
       allow(glob_tool).to receive(:call).and_return(file_matches)
       allow(File).to receive(:file?).and_return(true)
       allow(File).to receive(:foreach).and_yield(file_content[0]).and_yield(file_content[1]).and_yield(file_content[2])

@@ -2,8 +2,8 @@
 
 require "tidewave/file_tracker"
 
-class Tidewave::Tools::Glob < Tidewave::Tools::Base
-  tool_name "glob"
+class Tidewave::Tools::GlobProjectFiles < Tidewave::Tools::Base
+  tool_name "glob_project_files"
   description "Searches for files matching the given glob pattern."
 
   arguments do

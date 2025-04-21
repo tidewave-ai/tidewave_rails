@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-describe Tidewave::Tools::Glob do
+describe Tidewave::Tools::GlobProjectFiles do
   describe '.tool_name' do
     it 'returns the name of the tool' do
-      expect(described_class.tool_name).to eq('glob')
+      expect(described_class.tool_name).to eq('glob_project_files')
     end
   end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::Grep < Tidewave::Tools::Base
+class Tidewave::Tools::GrepProjectFiles < Tidewave::Tools::Base
   def self.ripgrep_executable
     @ripgrep_executable ||= `which rg`.strip
   end
@@ -12,7 +12,7 @@ class Tidewave::Tools::Grep < Tidewave::Tools::Base
   def self.description
     "Searches for text patterns in files using #{ripgrep_available? ? 'ripgrep' : 'a grep variant'}."
   end
-  tool_name "grep"
+  tool_name "grep_project_files"
 
   arguments do
     required(:pattern).filled(:string).description("The pattern to search for")
@@ -50,7 +50,7 @@ class Tidewave::Tools::Grep < Tidewave::Tools::Base
   end
 
   def execute_grep(pattern, glob, case_sensitive, max_results)
-    files = Tidewave::Tools::Glob.new.call(pattern: glob)
+    files = Tidewave::Tools::GlobProjectFiles.new.call(pattern: glob)
     results = []
     files.each do |file|
       next unless File.file?(file)
