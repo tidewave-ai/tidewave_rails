@@ -3,6 +3,8 @@
 require "tidewave/file_tracker"
 
 class Tidewave::Tools::ReadProjectFile < Tidewave::Tools::Base
+  file_system_tool
+
   tool_name "read_project_file"
   description <<~DESCRIPTION
     Returns the contents of the given file. Matches the `resources/read` MCP method.

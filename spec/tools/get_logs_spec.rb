@@ -3,6 +3,12 @@
 require 'rails'
 
 describe Tidewave::Tools::GetLogs do
+  describe '.file_system_tool?' do
+    it 'returns nil' do
+      expect(described_class.file_system_tool?).to be nil
+    end
+  end
+
   describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("get_logs")

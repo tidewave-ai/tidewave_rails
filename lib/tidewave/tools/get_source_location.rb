@@ -6,6 +6,14 @@ require "active_support/core_ext/object/blank"
 class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
   tool_name "get_source_location"
 
+  description <<~DESCRIPTION
+    Returns the source location for the given module (or function).
+
+    This works for modules in the current project, as well as dependencies.
+
+    This tool only works if you know the specific module (and optionally function) that is being targeted.
+    If that is the case, prefer this tool over grepping the file system.
+  DESCRIPTION
 
   arguments do
     required(:module_name).filled(:string).description("The module to get source location for. When this is the single argument passed, the entire module source is returned.")
@@ -21,15 +29,6 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
       line_number: line_number
     }.to_json
   end
-
-  description <<~DESCRIPTION
-    Returns the source location for the given module (or function).
-
-    This works for modules in the current project, as well as dependencies.
-
-    This tool only works if you know the specific module (and optionally function) that is being targeted.
-    If that is the case, prefer this tool over grepping the file system.
-  DESCRIPTION
 
   private
 

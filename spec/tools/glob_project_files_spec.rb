@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::GlobProjectFiles do
+  describe '.file_system_tool?' do
+    it 'returns true' do
+      expect(described_class.file_system_tool?).to be true
+    end
+  end
+
   describe '.tool_name' do
     it 'returns the name of the tool' do
       expect(described_class.tool_name).to eq('glob_project_files')

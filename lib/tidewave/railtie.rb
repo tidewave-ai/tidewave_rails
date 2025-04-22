@@ -3,7 +3,7 @@
 require "fast_mcp"
 require "logger"
 require "fileutils"
-require "tidewave/tools/base"
+require "tidewave/tool_resolver"
 
 module Tidewave
   class Railtie < Rails::Railtie
@@ -14,18 +14,16 @@ module Tidewave
       # Set up MCP server with the host application
       FastMcp.mount_in_rails(
         app,
-        name: "tidewave-tools",
+        name: "tidewave",
         version: Tidewave::VERSION,
-        path_prefix: "/tidewave",
-        messages_route: "messages",
-        sse_route: "mcp",
+        path_prefix: Tidewave::PATH_PREFIX,
+        messages_route: Tidewave::MESSAGES_ROUTE,
+        sse_route: Tidewave::SSE_ROUTE,
         logger: Logger.new(STDOUT)
       ) do |server|
-        app.config.after_initialize do
-          # Load and register the precoded tools from the gem
-          gem_tools_path = File.expand_path("../../lib/tidewave/tools/**/*.rb", __dir__)
-          Dir[gem_tools_path].each { |f| require f }
-          server.register_tools(*Tidewave::Tools::Base.descendants)
+        app.config.before_initialize do
+          # Register a custom middleware to register tools depending on `include_fs_tools` query parameter
+          app.middleware.use Tidewave::ToolResolver, server
         end
       end
     end

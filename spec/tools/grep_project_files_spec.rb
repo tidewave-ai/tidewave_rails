@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::GrepProjectFiles do
+  describe '.file_system_tool?' do
+    it 'returns true' do
+      expect(described_class.file_system_tool?).to be true
+    end
+  end
+
   describe '.tool_name' do
     it 'returns the tool name' do
       expect(described_class.tool_name).to eq("grep_project_files")

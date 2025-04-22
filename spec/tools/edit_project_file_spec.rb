@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::EditProjectFile do
+  describe '.file_system_tool?' do
+    it 'returns true' do
+      expect(described_class.file_system_tool?).to be true
+    end
+  end
+
   subject(:tool) { described_class.new }
 
   let(:path) { "test/file.rb" }
