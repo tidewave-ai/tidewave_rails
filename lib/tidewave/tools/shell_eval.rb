@@ -3,6 +3,7 @@
 require "open3"
 
 class Tidewave::Tools::ShellEval < Tidewave::Tools::Base
+  file_system_tool
   class CommandFailedError < StandardError; end
 
   tool_name "shell_eval"
