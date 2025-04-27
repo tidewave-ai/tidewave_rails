@@ -9,7 +9,9 @@ module Tidewave
   class ToolResolver
     ALL_TOOLS = Tidewave::Tools::Base.descendants
     NON_FILE_SYSTEM_TOOLS = ALL_TOOLS.reject(&:file_system_tool?)
-    SSE_PATH = "/tidewave/mcp".freeze
+    MESSAGES_PATH = "/tidewave/messages".freeze
+    TOOLS_LIST_METHOD = "tools/list".freeze
+    INCLUDE_FS_TOOLS_PARAM = "include_fs_tools".freeze
 
     def initialize(app, server)
       @app = app
@@ -18,9 +20,12 @@ module Tidewave
 
     def call(env)
       request = Rack::Request.new(env)
+      request_path = request.path
+      request_body = extract_request_body(request)
+      request_params = request.params
 
-      # Resolve tools depending on the query parameters
-      resolve_tool_list(request)
+      # Override tools list response if requested
+      return override_tools_list_response(env) if overriding_tools_list_request?(request_path, request_params, request_body)
 
       # Forward the request to the underlying app (RackTransport)
       @app.call(env)
@@ -28,25 +33,38 @@ module Tidewave
 
     private
 
-    def resolve_tool_list(request)
-      # We only want to resolve tools when the path is SSE_PATH
-      return unless request.path == SSE_PATH
+    def extract_request_body(request)
+      JSON.parse(request.body.read)
+    rescue JSON::ParserError => e
+      {}
+    ensure
+      request.body.rewind
+    end
 
-      # Check if the include_fs_tools parameter is set to "true"
-      # This allows clients to opt-in to file system access tools
-      # by adding ?include_fs_tools=true to their SSE connection URL
-      include_fs_tools = request.params["include_fs_tools"] == "true"
+    # When we want to exclude file system tools, we need to handle the request differently to prevent from listing them
+    def overriding_tools_list_request?(request_path, request_params, request_body)
+      request_path == MESSAGES_PATH && request_body["method"] == TOOLS_LIST_METHOD && request_params[INCLUDE_FS_TOOLS_PARAM] != "true"
+    end
 
-      # Reset server tools
+    RESPONSE_HEADERS = { "Content-Type" => "application/json" }
+
+    def override_tools_list_response(env)
+      register_non_file_system_tools
+      @app.call(env).tap { register_all_tools }
+    end
+
+    def register_non_file_system_tools
+      reset_server_tools
+      @server.register_tools(*NON_FILE_SYSTEM_TOOLS)
+    end
+
+    def register_all_tools
+      reset_server_tools
+      @server.register_tools(*ALL_TOOLS)
+    end
+
+    def reset_server_tools
       @server.instance_variable_set(:@tools, {})
-
-      if include_fs_tools
-        # Register all tools when file system access is explicitly requested
-        @server.register_tools(*ALL_TOOLS)
-      else
-        # Otherwise only register non-file system tools
-        @server.register_tools(*NON_FILE_SYSTEM_TOOLS)
-      end
     end
   end
 end

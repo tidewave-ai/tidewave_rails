@@ -8,9 +8,10 @@ describe Tidewave::ToolResolver do
   let(:app) { ->(env) { [ 200, {}, [ "OK" ] ] } }
   let(:server) { instance_double(FastMcp::Server) }
   let(:middleware) { described_class.new(app, server) }
-  let(:env) { Rack::MockRequest.env_for(request_path, params: params) }
-  let(:request_path) { described_class::SSE_PATH }
+  let(:env) { Rack::MockRequest.env_for(request_path, params: params, body: body) }
+  let(:request_path) { described_class::MESSAGES_PATH }
   let(:params) { {} }
+  let(:body) { "" }
 
   before do
     allow(server).to receive(:register_tools)
@@ -29,7 +30,7 @@ describe Tidewave::ToolResolver do
       end
     end
 
-    context "when the path is the SSE_PATH" do
+    context "when the path is the MESSAGES_PATH" do
       context "without include_fs_tools parameter" do
         it "registers only non-file system tools" do
           expect(server).to receive(:instance_variable_set).with(:@tools, {})

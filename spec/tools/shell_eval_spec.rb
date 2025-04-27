@@ -2,8 +2,8 @@
 
 describe Tidewave::Tools::ShellEval do
   describe '.file_system_tool?' do
-    it 'returns nil' do
-      expect(described_class.file_system_tool?).to be nil
+    it 'returns true' do
+      expect(described_class.file_system_tool?).to be true
     end
   end
 

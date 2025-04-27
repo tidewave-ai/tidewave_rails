@@ -23,6 +23,7 @@ module Tidewave
       ) do |server|
         app.config.before_initialize do
           # Register a custom middleware to register tools depending on `include_fs_tools` query parameter
+          server.register_tools(*Tidewave::ToolResolver::ALL_TOOLS)
           app.middleware.use Tidewave::ToolResolver, server
         end
       end
