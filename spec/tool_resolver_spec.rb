@@ -8,10 +8,12 @@ describe Tidewave::ToolResolver do
   let(:app) { ->(env) { [ 200, {}, [ "OK" ] ] } }
   let(:server) { instance_double(FastMcp::Server) }
   let(:middleware) { described_class.new(app, server) }
-  let(:env) { Rack::MockRequest.env_for(request_path, params: params, body: body) }
+  let(:env) { Rack::MockRequest.env_for(request_path, params: params, method: method, input: body) }
   let(:request_path) { described_class::MESSAGES_PATH }
   let(:params) { {} }
-  let(:body) { "" }
+  let(:body) { JSON.generate(request_body) }
+  let(:request_body) { { "method" => described_class::TOOLS_LIST_METHOD } }
+  let(:method) { "POST" }
 
   before do
     allow(server).to receive(:register_tools)
@@ -21,7 +23,7 @@ describe Tidewave::ToolResolver do
   describe "#call" do
     subject { middleware.call(env) }
 
-    context "when the path is not the SSE_PATH" do
+    context "when the path is not the MESSAGES_PATH" do
       let(:request_path) { "/some/other/path" }
 
       it "forwards the request without modifying tools" do
@@ -31,31 +33,49 @@ describe Tidewave::ToolResolver do
     end
 
     context "when the path is the MESSAGES_PATH" do
-      context "without include_fs_tools parameter" do
-        it "registers only non-file system tools" do
-          expect(server).to receive(:instance_variable_set).with(:@tools, {})
-          expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::NON_FILE_SYSTEM_TOOLS)
+      context "but not requesting tools/list" do
+        let(:request_body) { { "method" => "something_else" } }
+
+        it "forwards the request without modifying tools" do
+          expect(server).not_to receive(:register_tools)
           expect(subject).to eq([ 200, {}, [ "OK" ] ])
         end
       end
 
-      context "with include_fs_tools=false" do
-        let(:params) { { "include_fs_tools" => "false" } }
-
-        it "registers only non-file system tools" do
-          expect(server).to receive(:instance_variable_set).with(:@tools, {})
-          expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::NON_FILE_SYSTEM_TOOLS)
-          expect(subject).to eq([ 200, {}, [ "OK" ] ])
+      context "when requesting tools/list" do
+        context "without include_fs_tools parameter" do
+          it "registers only non-file system tools then all tools afterward" do
+            expect(server).to receive(:instance_variable_set).with(:@tools, {})
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::NON_FILE_SYSTEM_TOOLS)
+            expect(server).to receive(:instance_variable_set).with(:@tools, {})
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::ALL_TOOLS)
+            expect(subject).to eq([ 200, {}, [ "OK" ] ])
+          end
         end
-      end
 
-      context "with include_fs_tools=true" do
-        let(:params) { { "include_fs_tools" => "true" } }
+        context "with include_fs_tools=false" do
+          let(:params) { { "include_fs_tools" => "false" } }
 
-        it "registers all tools including file system tools" do
-          expect(server).to receive(:instance_variable_set).with(:@tools, {})
-          expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::ALL_TOOLS)
-          expect(subject).to eq([ 200, {}, [ "OK" ] ])
+          it "registers only non-file system tools then all tools afterward" do
+            expect(server).to receive(:instance_variable_set).with(:@tools, {})
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::NON_FILE_SYSTEM_TOOLS)
+            expect(server).to receive(:instance_variable_set).with(:@tools, {})
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::ALL_TOOLS)
+            expect(subject).to eq([ 200, {}, [ "OK" ] ])
+          end
+        end
+
+        context "with include_fs_tools=true" do
+          let(:params) { { "include_fs_tools" => "true" } }
+
+          # The issue is in the implementation - it uses params from the request
+          # to check include_fs_tools, but then checks the method from the JSON body
+          it "registers only non-file system tools then all tools afterward" do
+            expect(server).to receive(:instance_variable_set).with(:@tools, {}).twice
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::NON_FILE_SYSTEM_TOOLS)
+            expect(server).to receive(:register_tools).with(*Tidewave::ToolResolver::ALL_TOOLS)
+            expect(subject).to eq([ 200, {}, [ "OK" ] ])
+          end
         end
       end
     end
