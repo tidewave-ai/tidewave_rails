@@ -1,37 +1,47 @@
-# Tidewave 🌊
+# Tidewave
+
+Tidewave speeds up development with an AI assistant that understands your web application,
+how it runs, and what it delivers. Our current release connects your editor's
+assistant to your web framework runtime via [MCP](https://modelcontextprotocol.io/).
+
+[See our website](https://tidewave.ai) for more information.
+
+## Key Features
+
+Tidewave provides tools that allow your LLM of choice to:
+
+- inspect your application logs to help debugging errors
+- execute SQL queries and inspect your database
+- evaluate custom Ruby code in the context of your project
+- find Rubygems packages and search your dependencies
+
+and more.
 
 ## Installation
-- Clone this repo to the desired path
-- Add the gem to your Gemfile by referencing the path:
-`gem 'tidewave', path: '/path/to/the/cloned/repo'`
 
-## Usage
-I have tested it againt the official MCP inspector ATM:
-`npx @modelcontextprotocol/inspector`
+You can install Tidewave by adding the `tidewave` gem to the development group in your Gemfile:
 
-Launch your rails server on port other than 3000 (as MCP inspector's proxy runs on 3000):
-`bundle exec rails s -p 3001`
-
-Then, access the inspector's UI, choose SSE protocol, and for the URL, enter: `http://localhost:3001/tidewave/mcp`
-
-## Cursor Settings
-open ~/.cursor/mcp.json:
-```json
-{
-  "mcpServers": {
-    "tidewave": {
-      "url": "http://localhost:3001/tidewave/mcp"
-    }
-  }
-}
+```ruby
+gem "tidewave", group: :development
 ```
 
-## Acknowledgements
+Tidewave will now run on the same port as your regular Rails application.
+In particular, the MCP is located by default at http://localhost:3000/tidewave/mcp.
+[You must configure your editor and AI assistants accordingly](https://hexdocs.pm/tidewave/mcp.html).
 
-A thank you to Yorick Jacquin, for creating [FastMCP](https://github.com/yjacquin/fast_mcp)
-and implementing the initial version of this project.
+## Considerations
 
-## License
+### Production Environment
+
+Tidewave is a powerful tool that can help you develop your web application faster and more efficiently.
+However, it is important to note that Tidewave is not meant to be used in a production environment.
+
+Tidewave will raise an error if it is used in a production environment.
+### Web server requirements
+
+Tidewave currently requires a threaded web server like Puma.
+
+### License
 
 Copyright (c) 2025 Dashbit
 
