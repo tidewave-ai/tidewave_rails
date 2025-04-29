@@ -13,7 +13,7 @@ Tidewave provides tools that allow your LLM of choice to:
 - inspect your application logs to help debugging errors
 - execute SQL queries and inspect your database
 - evaluate custom Ruby code in the context of your project
-- find Rubygems packages and search your dependencies
+- find Rubygems packages and source code locations
 
 and more.
 
@@ -37,11 +37,16 @@ Tidewave is a powerful tool that can help you develop your web application faste
 However, it is important to note that Tidewave is not meant to be used in a production environment.
 
 Tidewave will raise an error if it is used in a production environment.
+
 ### Web server requirements
 
 Tidewave currently requires a threaded web server like Puma.
 
-### License
+## Acknowledgements
+
+A thank you to Yorick Jacquin, for creating [FastMCP](https://github.com/yjacquin/fast_mcp) and implementing the initial version of this project.
+
+## License
 
 Copyright (c) 2025 Dashbit
 
