@@ -28,10 +28,5 @@ module Tidewave
         end
       end
     end
-
-    # Install generator to set up necessary files in the host application
-    generators do
-      require "generators/tidewave/install/install_generator"
-    end
   end
 end
