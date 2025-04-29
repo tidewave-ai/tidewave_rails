@@ -6,15 +6,11 @@ Gem::Specification.new do |spec|
   spec.name        = "tidewave"
   spec.version     = Tidewave::VERSION
   spec.authors     = [ "Yorick Jacquin" ]
-  spec.email       = [ "yorickjacquin@gmail.com" ]
-  spec.homepage    = "https://github.com/tidewave-ai/tidewave_rails"
-  spec.summary     = "Rails MCP server"
-  spec.description = "Rails MCP server"
-  spec.license     = "MIT"
-
-  # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
-  # to allow pushing to a single host or delete this section to allow pushing to any host.
-  spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
+  spec.email       = [ "support@tidewave.ai" ]
+  spec.homepage    = "https://tidewave.ai/"
+  spec.summary     = "Tidewave for Rails"
+  spec.description = "Tidewave for Rails"
+  spec.license     = "Apache-2.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/tidewave-ai/tidewave_rails"
