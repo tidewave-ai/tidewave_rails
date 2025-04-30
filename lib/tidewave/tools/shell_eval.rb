@@ -16,6 +16,10 @@ class Tidewave::Tools::ShellEval < Tidewave::Tools::Base
     Instead rely on the tools with the name matching `*_project_files`.
 
     Do not use this tool to evaluate Ruby code. Use `project_eval` instead.
+    Do not use this tool for commands that run indefinitely,
+    such as servers (like `bin/dev` or `npm run dev`),
+    REPLs (`bin/rails console`) or file watchers.
+
     Only use this tool if other means are not available.
   DESCRIPTION
 
