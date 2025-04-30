@@ -7,9 +7,10 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
 
     The current Ruby version is: #{RUBY_VERSION}
 
-    The code is executed in the context of the user's project, therefore use this tool any
-    time you need to evaluate code, for example to test the behavior of a function or to debug
-    something. The tool also returns anything written to standard output.
+    Use this tool every time you need to evaluate Ruby code,
+    including to test the behaviour of a function or to debug
+    something. The tool also returns anything written to standard
+    output. DO NOT use shell tools to evaluate Ruby code.
   DESCRIPTION
 
   arguments do
