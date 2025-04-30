@@ -12,8 +12,8 @@ class Tidewave::Tools::ShellEval < Tidewave::Tools::Base
 
     The operating system is of flavor #{RUBY_PLATFORM}.
 
-    Avoid using this tool for file operations. Instead, rely on
-    dedicated file system tools, if available.
+    Avoid using this tool for manipulating project files.
+    Instead rely on the tools with the name matching `*_project_files`.
 
     Do not use this tool to evaluate Ruby code. Use `project_eval` instead.
     Only use this tool if other means are not available.
