@@ -55,34 +55,35 @@ describe Tidewave::Tools::PackageSearch do
 
   describe "#call" do
     let(:response_body) { File.read("spec/fixtures/package_search.json") }
+    let(:parsed_response) { JSON.parse(response_body) }
+    let(:http_response) { instance_double('Net::HTTPSuccess') }
+
+    before do
+      allow(http_response).to receive(:body).and_return(response_body)
+      allow(http_response).to receive(:is_a?).with(Net::HTTPSuccess).and_return(true)
+    end
 
     context "without page" do
       it "returns results for page 1" do
-        faraday_double = instance_double('Faraday::Connection')
-        response = instance_double('Faraday::Response')
-        expect(faraday_double).to receive(:get).with("/api/v1/search.json?query=rails&page=1").and_return(response)
-        expect(response).to receive(:body).and_return(response_body)
+        uri = URI("https://rubygems.org/api/v1/search.json")
+        uri.query = URI.encode_www_form(query: "rails", page: 1)
 
-        expect(Faraday).to receive(:new).and_return(faraday_double)
+        expect(Net::HTTP).to receive(:get_response).with(uri).and_return(http_response)
 
         result = described_class.new.call(search: "rails")
-
-        expect(result).to eq(response_body)
+        expect(result).to eq(parsed_response)
       end
     end
 
     context "with page" do
       it "returns results for the given page" do
-        faraday_double = instance_double('Faraday::Connection')
-        response = instance_double('Faraday::Response')
-        expect(faraday_double).to receive(:get).with("/api/v1/search.json?query=rails&page=2").and_return(response)
-        expect(response).to receive(:body).and_return(response_body)
+        uri = URI("https://rubygems.org/api/v1/search.json")
+        uri.query = URI.encode_www_form(query: "rails", page: 2)
 
-        allow(Faraday).to receive(:new).and_return(faraday_double)
+        expect(Net::HTTP).to receive(:get_response).with(uri).and_return(http_response)
 
         result = described_class.new.call(search: "rails", page: 2)
-
-        expect(result).to eq(response_body)
+        expect(result).to eq(parsed_response)
       end
     end
   end
