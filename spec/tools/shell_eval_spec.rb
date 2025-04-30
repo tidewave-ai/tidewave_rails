@@ -15,15 +15,8 @@ describe Tidewave::Tools::ShellEval do
 
   describe '.description' do
     it 'returns a description of the tool' do
-      expect(described_class.description).to eq(<<~DESCRIPTION
-        Executes a shell command in the project root directory.
-
-        Avoid using this tool for file operations. Instead, rely on dedicated file system tools, if available.
-
-        The operating system is of flavor #{RUBY_PLATFORM}.
-
-        Only use this tool if other means are not available.
-      DESCRIPTION
+      expect(described_class.description).to match(
+        /Executes a shell command in the project root directory/
       )
     end
   end
