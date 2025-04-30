@@ -15,7 +15,7 @@ class Tidewave::Tools::ShellEval < Tidewave::Tools::Base
     Avoid using this tool for file operations. Instead, rely on
     dedicated file system tools, if available.
 
-    Do not use this tool to evaluate Ruby code. Use `project_eval` instead.        
+    Do not use this tool to evaluate Ruby code. Use `project_eval` instead.
     Only use this tool if other means are not available.
   DESCRIPTION
 
