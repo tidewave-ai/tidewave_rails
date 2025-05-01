@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-require "faraday"
+require "net/http"
+require "uri"
+require "json"
 
 class Tidewave::Tools::PackageSearch < Tidewave::Tools::Base
   tool_name "package_search"
@@ -20,18 +22,15 @@ class Tidewave::Tools::PackageSearch < Tidewave::Tools::Base
   end
 
   def call(search:, page: 1)
-    response = rubygems_client.get("/api/v1/search.json?query=#{search}&page=#{page}")
+    uri = URI("https://rubygems.org/api/v1/search.json")
+    uri.query = URI.encode_www_form(query: search, page: page)
 
-    response.body
-  end
+    response = Net::HTTP.get_response(uri)
 
-  private
-
-  def rubygems_client
-    @rubygems_client ||= Faraday.new(url: "https://rubygems.org") do |faraday|
-      faraday.response :raise_error
-
-      faraday.adapter Faraday.default_adapter
+    if response.is_a?(Net::HTTPSuccess)
+      JSON.parse(response.body)
+    else
+      raise "RubyGems API request failed with status code: #{response.code}"
     end
   end
 end
