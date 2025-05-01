@@ -10,9 +10,15 @@ class Tidewave::Tools::ShellEval < Tidewave::Tools::Base
   description <<~DESCRIPTION
     Executes a shell command in the project root directory.
 
-    Avoid using this tool for file operations. Instead, rely on dedicated file system tools, if available.
-
     The operating system is of flavor #{RUBY_PLATFORM}.
+
+    Avoid using this tool for manipulating project files.
+    Instead rely on the tools with the name matching `*_project_files`.
+
+    Do not use this tool to evaluate Ruby code. Use `project_eval` instead.
+    Do not use this tool for commands that run indefinitely,
+    such as servers (like `bin/dev` or `npm run dev`),
+    REPLs (`bin/rails console`) or file watchers.
 
     Only use this tool if other means are not available.
   DESCRIPTION

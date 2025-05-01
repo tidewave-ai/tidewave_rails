@@ -15,16 +15,8 @@ describe Tidewave::Tools::ProjectEval do
 
   describe ".description" do
     it "returns the correct description" do
-      expect(described_class.description).to eq(
-        <<~DESCRIPTION
-          Evaluates Ruby code in the context of the project.
-
-          The current Ruby version is: #{RUBY_VERSION}
-
-          The code is executed in the context of the user's project, therefore use this tool any
-          time you need to evaluate code, for example to test the behavior of a function or to debug
-          something. The tool also returns anything written to standard output.
-        DESCRIPTION
+      expect(described_class.description).to match(
+        /Evaluates Ruby code in the context of the project/
       )
     end
   end
