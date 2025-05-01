@@ -5,7 +5,7 @@ module Tidewave
     def initialize
       @logger = Logger.new(STDOUT)
       @allowed_origins = nil
-      @localhost_only = nil
+      @localhost_only = true
       @allowed_ips = nil
     end
   end
