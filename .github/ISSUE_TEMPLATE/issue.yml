@@ -1,0 +1,49 @@
+---
+name: Report an issue
+description: Tell us about something that is not working the way we (probably) intend
+body:
+  - type: input
+    id: mcp-client
+    attributes:
+      label: Is your issue related to a particular editor or MCP client?
+
+  - type: input
+    id: mcp-proxy
+    attributes:
+      label: Are you using a MCP Proxy?
+      description: Have you tried updating it? Have you tried another proxy?
+
+  - type: input
+    id: tidewave-version
+    attributes:
+      label: What is your Tidewave version?
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: What is your operating system?
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: >
+        Include code samples, errors, and stacktraces if appropriate.
+
+        If reporting a bug, please include the reproducing steps.
+
+        If using an editor or MCP client, include your configuration.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A short description on how you expect the code to behave.
+    validations:
+      required: true
