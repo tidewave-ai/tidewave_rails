@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "rack"
+require "json"
+require "active_support/core_ext/class"
 
-gem_tools_path = File.expand_path("../../lib/tidewave/tools/**/*.rb", __dir__)
+gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
 
 module Tidewave
