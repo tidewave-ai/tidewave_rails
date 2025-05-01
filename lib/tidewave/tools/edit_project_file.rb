@@ -2,8 +2,6 @@
 
 require "tidewave/file_tracker"
 
-# TODO: This tool is not yet implemented, it does not track the latest file read.
-# Also, it does not raise an error if the file contains the substring multiple times.
 class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
   file_system_tool
 
