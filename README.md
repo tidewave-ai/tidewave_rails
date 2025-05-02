@@ -29,6 +29,24 @@ Tidewave will now run on the same port as your regular Rails application.
 In particular, the MCP is located by default at http://localhost:3000/tidewave/mcp.
 [You must configure your editor and AI assistants accordingly](https://hexdocs.pm/tidewave/mcp.html).
 
+## Configuration
+
+You may configure the `tidewave` using the following syntax:
+
+```ruby
+  config.tidewave.allowed_ips = [IPAddr.new("192.168.97.1")]
+```
+
+The following options are available:
+
+  * `:allowed_origins`
+
+  * `:localhost_only`
+
+  * `:allowed_ips`
+
+You can read more about this options in [FastMCP](https://github.com/yjacquin/fast_mcp) README.
+
 ## Considerations
 
 ### Production Environment
