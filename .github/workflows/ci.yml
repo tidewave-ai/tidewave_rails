@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         ruby-version: [3.2.0, 3.3.0, 3.4.0]
+        appraisal: ["rails_7.1", "rails_7.2", "rails_8.0"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby ${{ matrix.ruby-version }}
@@ -19,8 +20,11 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
-      - name: Run tests
-        run: bundle exec rspec
+      - name: Install appraisal dependencies
+        run: bundle exec appraisal install
+
+      - name: Run appraisal
+        run: bundle exec appraisal ${{ matrix.appraisal }} rspec
 
       - name: Lint code for consistent style
         run: bundle exec rubocop

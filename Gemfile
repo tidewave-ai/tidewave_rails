@@ -16,4 +16,5 @@ gem "sqlite3", "2.5.0"
 group :development, :test do
   gem "rspec-rails"
   gem "pry"
+  gem "appraisal"
 end

@@ -4,3 +4,7 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # freeze strings
 Style/FrozenStringLiteralComment:
   Enabled: true
+
+AllCops:
+  Exclude:
+    - gemfiles/*
