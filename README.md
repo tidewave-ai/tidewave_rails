@@ -14,6 +14,7 @@ Tidewave provides tools that allow your LLM of choice to:
 - execute SQL queries and inspect your database
 - evaluate custom Ruby code in the context of your project
 - find Rubygems packages and source code locations
+- run RuboCop to ensure that the AI generated code is following your projects stylistic choices
 
 and more.
 
