@@ -55,8 +55,13 @@ describe Tidewave::Tools::PackageSearch do
 
   describe "#call" do
     let(:response_body) { File.read("spec/fixtures/package_search.json") }
-    let(:parsed_response) { JSON.parse(response_body) }
     let(:http_response) { instance_double('Net::HTTPSuccess') }
+
+    let(:parsed_response) do
+      JSON.parse(response_body).map do |package|
+        { name: package["name"], version: package["version"] }
+      end
+    end
 
     before do
       allow(http_response).to receive(:body).and_return(response_body)
