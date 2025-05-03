@@ -29,7 +29,7 @@ class Tidewave::Tools::PackageSearch < Tidewave::Tools::Base
 
     if response.is_a?(Net::HTTPSuccess)
       JSON.parse(response.body).map do |package|
-        { name: package["name"], version: package["version"] }
+        { name: package["name"], version: package["version"], downloads: package["downloads"] }
       end
     else
       raise "RubyGems API request failed with status code: #{response.code}"
