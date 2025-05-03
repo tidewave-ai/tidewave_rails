@@ -59,7 +59,12 @@ describe Tidewave::Tools::PackageSearch do
 
     let(:parsed_response) do
       JSON.parse(response_body).map do |package|
-        { name: package["name"], version: package["version"], downloads: package["downloads"] }
+        {
+          name: package["name"],
+          version: package["version"],
+          downloads: package["downloads"],
+          documentation_uri: package["documentation_uri"]
+        }
       end
     end
 
