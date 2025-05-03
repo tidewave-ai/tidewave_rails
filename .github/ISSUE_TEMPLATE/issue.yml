@@ -1,24 +1,31 @@
 ---
-name: Report an issue
-description: Tell us about something that is not working the way we (probably) intend
+name: Editor/MCP client integration issue
+description: File a bug report related to Tidewave and your editor/MCP client
+
 body:
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for taking the time to fill out this bug report.
+        Before moving forward, check out
+        [our Troubleshooting guide](https://hexdocs.pm/tidewave/troubleshooting.html).
+
   - type: input
     id: mcp-client
     attributes:
-      label: Is your issue related to a particular editor or MCP client?
+      label: Which editor/MCP client are you using?
 
   - type: input
     id: mcp-proxy
     attributes:
-      label: Are you using a MCP Proxy?
+      label: Are you using a MCP proxy?
       description: Have you tried updating it? Have you tried another proxy?
 
   - type: input
-    id: tidewave-version
+    id: mcp-server
     attributes:
-      label: What is your Tidewave version?
-    validations:
-      required: true
+      label: Is your web application working correctly?
+      description: Paste the output of `curl -v http://localhost:PORT/tidewave/mcp` (remember to replace PORT by your actual port)
 
   - type: input
     id: os
@@ -27,14 +34,19 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: tidewave-version
+    attributes:
+      label: What is your Tidewave version?
+    validations:
+      required: true
+
   - type: textarea
     id: current-behavior
     attributes:
       label: Current behavior
       description: >
-        Include code samples, errors, and stacktraces if appropriate.
-
-        If reporting a bug, please include the reproducing steps.
+        If reporting a bug, please errors, stacktraces, and reproducing steps.
 
         If using an editor or MCP client, include your configuration.
     validations:
@@ -44,6 +56,6 @@ body:
     id: expected-behavior
     attributes:
       label: Expected behavior
-      description: A short description on how you expect the code to behave.
+      description: A short description on how you expected it to behave.
     validations:
       required: true
