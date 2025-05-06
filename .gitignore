@@ -1,7 +1,7 @@
 /.bundle/
+/vendor/bundle
 /doc/
 /log/*.log
 /pkg/
 /tmp/
 /*.gem
-
