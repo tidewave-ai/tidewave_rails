@@ -32,7 +32,7 @@ describe Tidewave::Tools::GetSourceLocation do
           reference: {
             type: "string",
             description: "The class/module/method to lookup, such String, String#gsub or File.executable?"
-          },
+          }
         },
         required: [ "reference" ],
         type: "object"
