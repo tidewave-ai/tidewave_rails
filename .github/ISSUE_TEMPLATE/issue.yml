@@ -19,7 +19,7 @@ body:
     id: mcp-proxy
     attributes:
       label: Are you using a MCP proxy?
-      description: Have you tried updating it? Have you tried another proxy?
+      description: Which one and which version? Have you tried updating it? Have you tried another proxy?
 
   - type: input
     id: mcp-server
