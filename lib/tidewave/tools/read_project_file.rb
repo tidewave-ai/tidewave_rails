@@ -15,6 +15,7 @@ class Tidewave::Tools::ReadProjectFile < Tidewave::Tools::Base
   end
 
   def call(path:)
+    Tidewave::FileTracker.validate_path_access!(path)
     Tidewave::FileTracker.read_file(path)
   end
 end

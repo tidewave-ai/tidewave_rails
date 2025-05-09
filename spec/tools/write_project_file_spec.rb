@@ -36,8 +36,13 @@ describe Tidewave::Tools::WriteProjectFile do
     end
 
     it "validates the path is writable" do
-      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path)
+      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path, nil)
       tool.call(path: path, content: content)
+    end
+
+    it "validates the path is writable with atime" do
+      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path, 123)
+      tool.call(path: path, content: content, atime: 123)
     end
 
     it "writes the content to the file" do
@@ -69,7 +74,7 @@ describe Tidewave::Tools::WriteProjectFile do
       it "works with paths in subdirectories" do
         nested_path = "deeply/nested/directory/file.rb"
 
-        expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(nested_path)
+        expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(nested_path, nil)
         expect(Tidewave::FileTracker).to receive(:write_file).with(nested_path, content)
 
         tool.call(path: nested_path, content: content)
@@ -79,7 +84,7 @@ describe Tidewave::Tools::WriteProjectFile do
         different_extensions = [ "test.rb", "test.js", "test.html", "test.css", "test.md" ]
 
         different_extensions.each do |file_path|
-          expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(file_path)
+          expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(file_path, nil)
           expect(Tidewave::FileTracker).to receive(:write_file).with(file_path, content)
 
           tool.call(path: file_path, content: content)
