@@ -15,11 +15,14 @@ class Tidewave::Tools::WriteProjectFile < Tidewave::Tools::Base
   arguments do
     required(:path).filled(:string).description("The path to the file to write. It is relative to the project root.")
     required(:content).filled(:string).description("The content to write to the file")
+    optional(:atime).filled(:integer).hidden.description("The Unix timestamp this file was last accessed. Not to be used.")
   end
 
-  def call(path:, content:)
-    Tidewave::FileTracker.validate_path_is_writable!(path)
-
+  def call(path:, content:, atime: nil)
+    Tidewave::FileTracker.validate_path_is_writable!(path, atime)
     Tidewave::FileTracker.write_file(path, content)
+    _meta[:mtime] = Time.now.to_i
+
+    "OK"
   end
 end

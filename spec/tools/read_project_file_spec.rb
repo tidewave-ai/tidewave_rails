@@ -49,26 +49,19 @@ describe Tidewave::Tools::ReadProjectFile do
     let(:file_content) { "class User < ApplicationRecord\nend\n" }
 
     before do
-      # Stub git root directory
-      allow(subject).to receive(:`).with("git rev-parse --show-toplevel").and_return("#{git_root}\n")
-
-      # Stub file existence check
+      allow(Tidewave::FileTracker).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:exist?).with(full_path).and_return(true)
-
-      # Stub file content read
       allow(File).to receive(:read).with(full_path).and_return(file_content)
-
-      # Stub FileTracker.record_read
-      allow(Tidewave::FileTracker).to receive(:record_read).with(file_path)
+      allow(File).to receive(:mtime).with(full_path).and_return(Time.new(1971))
     end
 
     it "returns the file content" do
       expect(subject.call(path: file_path)).to eq(file_content)
     end
 
-    it "records the file read in FileTracker" do
+    it "returns the mtime in metadata" do
       subject.call(path: file_path)
-      expect(Tidewave::FileTracker).to have_received(:record_read).with(file_path)
+      expect(subject._meta[:mtime]).to eq(Time.new(1971).to_i)
     end
 
     context "when the file does not exist" do

@@ -26,11 +26,12 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
     required(:path).filled(:string).description("The path to the file to edit. It is relative to the project root.")
     required(:old_string).filled(:string).description("The string to search for")
     required(:new_string).filled(:string).description("The string to replace the old_string with")
+    optional(:atime).filled(:integer).hidden.description("The Unix timestamp this file was last accessed. Not to be used.")
   end
 
-  def call(path:, old_string:, new_string:)
+  def call(path:, old_string:, new_string:, atime: nil)
     # Check if the file exists within the project root and has been read
-    Tidewave::FileTracker.validate_path_is_editable!(path)
+    Tidewave::FileTracker.validate_path_is_editable!(path, atime)
 
     old_content = Tidewave::FileTracker.read_file(path)
 
@@ -40,7 +41,7 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
     raise ArgumentError, "old_string is not unique" if scan_result.size > 1
 
     new_content = old_content.sub(old_string, new_string)
-
     Tidewave::FileTracker.write_file(path, new_content)
+    "OK"
   end
 end
