@@ -43,5 +43,6 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
 
     new_content = old_content.sub(old_string, new_string)
     Tidewave::FileTracker.write_file(path, new_content)
+    "OK"
   end
 end
