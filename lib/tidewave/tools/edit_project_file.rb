@@ -26,8 +26,7 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
     required(:path).filled(:string).description("The path to the file to edit. It is relative to the project root.")
     required(:old_string).filled(:string).description("The string to search for")
     required(:new_string).filled(:string).description("The string to replace the old_string with")
-    # TODO: Make this a hidden field
-    optional(:atime).filled(:integer).description("The Unix timestamp this file was last accessed. Not to be used.")
+    optional(:atime).filled(:integer).hidden.description("The Unix timestamp this file was last accessed. Not to be used.")
   end
 
   def call(path:, old_string:, new_string:, atime: nil)
@@ -43,6 +42,8 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
 
     new_content = old_content.sub(old_string, new_string)
     Tidewave::FileTracker.write_file(path, new_content)
+    _meta[:mtime] = Time.now
+
     "OK"
   end
 end
