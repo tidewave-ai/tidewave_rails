@@ -12,7 +12,7 @@ module Tidewave
       full_path = file_full_path(path)
       # Explicitly read the mtime first to avoid race conditions
       mtime = File.mtime(full_path).to_i
-      [mtime, File.read(full_path)]
+      [ mtime, File.read(full_path) ]
     end
 
     def write_file(path, content)

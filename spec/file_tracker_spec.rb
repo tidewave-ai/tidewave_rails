@@ -164,7 +164,7 @@ describe Tidewave::FileTracker do
     end
 
     it 'reads and returns the file contents' do
-      expect(described_class.read_file(test_path)).to eq([Time.new(1971).to_i, file_content])
+      expect(described_class.read_file(test_path)).to eq([ Time.new(1971).to_i, file_content ])
     end
   end
 
