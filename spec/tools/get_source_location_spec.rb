@@ -78,10 +78,10 @@ describe Tidewave::Tools::GetSourceLocation do
 
       context "when the module is found" do
         it "returns the correct result" do
-          expect(subject).to eq({
+          expect(subject).to eq([ {
             file_path: __FILE__,
             line_number: line_number
-          }.to_json)
+          }.to_json, {} ])
         end
       end
 
