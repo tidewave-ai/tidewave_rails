@@ -1,58 +1,60 @@
 # frozen_string_literal: true
 
-require "active_support/core_ext/string/inflections"
-require "active_support/core_ext/object/blank"
-
 class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
   tool_name "get_source_location"
 
   description <<~DESCRIPTION
-    Returns the source location for the given module (or function).
+    Returns the source location for the given reference.
 
-    This works for modules in the current project, as well as dependencies.
+    The reference may be a constant, most commonly classes and modules
+    such as `String`, an instance method, such as `String#gsub`, or class
+    method, such as `File.executable?`
 
-    This tool only works if you know the specific module (and optionally function) that is being targeted.
+    This works for methods in the current project, as well as dependencies.
+
+    This tool only works if you know the specific constant/method being targeted.
     If that is the case, prefer this tool over grepping the file system.
   DESCRIPTION
 
   arguments do
-    required(:module_name).filled(:string).description("The module to get source location for. When this is the single argument passed, the entire module source is returned.")
-    optional(:function_name).filled(:string).description("The function to get source location for. When used, a module must also be passed.")
+    required(:reference).filled(:string).description("The constant/method to lookup, such String, String#gsub or File.executable?")
   end
 
+  def call(reference:)
+    file_path, line_number = get_source_location(reference)
 
-  def call(module_name:, function_name: nil)
-    file_path, line_number = get_source_location(module_name, function_name)
-
+    if file_path
     {
       file_path: file_path,
       line_number: line_number
     }.to_json
+    else
+      raise NameError, "could not find source location for #{reference}"
+    end
   end
 
   private
 
-  def get_source_location(module_name, function_name)
+  def get_source_location(reference)
+    constant_path, selector, method_name = reference.rpartition(/\.|#/)
+
+    # There are no selectors, so the method_name is a constant path
+    return Object.const_source_location(method_name) if selector.empty?
+
     begin
-      module_ref = module_name.constantize
-    rescue NameError
-      raise NameError, "Module #{module_name} not found"
+      mod = Object.const_get(constant_path)
+    rescue NameError => e
+      raise e
+    rescue
+      raise "wrong or invalid reference #{reference}"
     end
 
-    return get_method_definition(module_ref, function_name) if function_name.present?
+    raise "reference #{constant_path} does not point a class/module" unless mod.is_a?(Module)
 
-    module_ref.const_source_location(module_name)
-  end
-
-  def get_method_definition(module_ref, function_name)
-    module_ref.method(function_name).source_location
-  rescue NameError
-    get_instance_method_definition(module_ref, function_name)
-  end
-
-  def get_instance_method_definition(module_ref, function_name)
-    module_ref.instance_method(function_name).source_location
-  rescue NameError
-    raise NameError, "Method #{function_name} not found in module #{module_ref.name}"
+    if selector == "#"
+      mod.instance_method(method_name).source_location
+    else
+      mod.method(method_name).source_location
+    end
   end
 end
