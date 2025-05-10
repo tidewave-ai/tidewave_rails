@@ -21,7 +21,7 @@ class Tidewave::Tools::WriteProjectFile < Tidewave::Tools::Base
   def call(path:, content:, atime: nil)
     Tidewave::FileTracker.validate_path_is_writable!(path, atime)
     Tidewave::FileTracker.write_file(path, content)
-    _meta[:mtime] = Time.now
+    _meta[:mtime] = Time.now.to_i
 
     "OK"
   end

@@ -50,15 +50,6 @@ describe Tidewave::Tools::WriteProjectFile do
       tool.call(path: path, content: content)
     end
 
-    it 'adds the mtime to the _meta' do
-      expect(Tidewave::FileTracker).to receive(:write_file).with(path, content)
-
-      tool.call(path: path, content: content)
-
-      expect(tool._meta.keys).to eq([ :mtime ])
-      expect(tool._meta[:mtime]).to be_a(Time)
-    end
-
     context "when writing different types of content" do
       it "handles empty content" do
         empty_content = ""

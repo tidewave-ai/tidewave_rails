@@ -160,10 +160,11 @@ describe Tidewave::FileTracker do
     before do
       allow(described_class).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:read).with(full_path).and_return(file_content)
+      allow(File).to receive(:mtime).with(full_path).and_return(Time.new(1971))
     end
 
     it 'reads and returns the file contents' do
-      expect(described_class.read_file(test_path)).to eq(file_content)
+      expect(described_class.read_file(test_path)).to eq([Time.new(1971).to_i, file_content])
     end
   end
 

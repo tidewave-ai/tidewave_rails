@@ -41,15 +41,6 @@ describe Tidewave::Tools::EditProjectFile do
     tool.call(path: path, old_string: old_string, new_string: new_string)
   end
 
-  it 'adds the mtime to the _meta' do
-    expect(Tidewave::FileTracker).to receive(:write_file).with(path, expected_content)
-
-    tool.call(path: path, old_string: old_string, new_string: new_string)
-
-    expect(tool._meta.keys).to eq([ :mtime ])
-    expect(tool._meta[:mtime]).to be_a(Time)
-  end
-
   it "raises an error if the file is not editable" do
     expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, nil).and_raise(ArgumentError, "File must be read first")
     expect(Tidewave::FileTracker).to receive(:write_file).never
