@@ -68,7 +68,8 @@ module Tidewave
     private
 
     def ruby_file?(path)
-      File.extname(path) == ".rb"
+      [".rb", ".rake", ".gemspec"].include?(File.extname(path)) ||
+        ["Gemfile"].include?(File.basename(path))
     end
 
     def validate_ruby_syntax!(content)
