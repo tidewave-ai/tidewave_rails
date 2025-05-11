@@ -56,8 +56,8 @@ describe Tidewave::FileTracker do
 
     it 'raises an error if path starts with ..' do
       expect {
-        described_class.validate_path_access!("../outside/file.rb")
-      }.to raise_error(ArgumentError, "File path must not start with '..'")
+        described_class.validate_path_access!("inside/../../file.rb")
+      }.to raise_error(ArgumentError, "File path must not contain '..'")
     end
 
     it 'raises an error if file is outside project directory' do

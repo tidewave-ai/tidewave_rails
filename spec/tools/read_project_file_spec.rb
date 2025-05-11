@@ -85,7 +85,7 @@ describe Tidewave::Tools::ReadProjectFile do
 
       it "raises an ArgumentError" do
         expect { subject.call(path: higher_path) }.to raise_error(
-          ArgumentError, "File path must not start with '..'"
+          ArgumentError, "File path must not contain '..'"
         )
       end
     end

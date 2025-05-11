@@ -36,7 +36,7 @@ module Tidewave
     end
 
     def validate_path_access!(path, validate_existence: true)
-      raise ArgumentError, "File path must not start with '..'" if path.start_with?("..")
+      raise ArgumentError, "File path must not contain '..'" if path.include?("..")
 
       # Ensure the path is within the project
       full_path = file_full_path(path)
