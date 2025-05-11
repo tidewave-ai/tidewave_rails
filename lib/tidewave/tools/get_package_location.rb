@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pathname"
+
 class Tidewave::Tools::GetPackageLocation < Tidewave::Tools::Base
   tool_name "get_package_location"
 
