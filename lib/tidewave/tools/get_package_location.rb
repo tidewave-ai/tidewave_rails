@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Tidewave::Tools::GetPackageLocation < Tidewave::Tools::Base
   tool_name "get_package_location"
 
