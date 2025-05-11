@@ -1,0 +1,3 @@
+Once work is complete, run `bundle exec rspec` for tests
+and fix any failing test. Also run `bin/rubocop --autocorrect`
+and fix any pending report that has not been autocorrectead.
