@@ -1,4 +1,5 @@
 /.bundle/
+/gemfiles/vendor
 /vendor/bundle
 /doc/
 /log/*.log
