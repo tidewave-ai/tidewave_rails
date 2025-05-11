@@ -16,6 +16,7 @@ module Tidewave
     end
 
     def write_file(path, content)
+      validate_ruby_syntax!(content) if ruby_file?(path)
       full_path = file_full_path(path)
 
       # Create the directory if it doesn't exist
@@ -62,6 +63,18 @@ module Tidewave
       validate_path_has_been_read_since_last_write!(path, atime)
 
       true
+    end
+
+    private
+
+    def ruby_file?(path)
+      File.extname(path) == ".rb"
+    end
+
+    def validate_ruby_syntax!(content)
+      RubyVM::AbstractSyntaxTree.parse(content)
+    rescue SyntaxError => e
+      raise "Invalid Ruby syntax: #{e.message}"
     end
 
     def validate_path_has_been_read_since_last_write!(path, atime)
