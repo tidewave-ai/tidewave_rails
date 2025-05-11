@@ -1,8 +1,8 @@
 This project implements Model Context Protocol tools
 by embedding a MCP server inside a Rails application.
-It uses Ruby's fast_mcp.
+It uses Ruby's fast-mcp.
 
-Once you are doing with changes, run `bundle exec rspec`
+Once you are done with changes, run `bundle exec rspec`
 for tests and fix any failing test. Also run
 `bin/rubocop --autocorrect` and fix any pending report
 that has not been autocorrected.
