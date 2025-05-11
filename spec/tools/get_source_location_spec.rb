@@ -45,7 +45,7 @@ describe Tidewave::Tools::GetSourceLocation do
   end
 
   describe "#call" do
-    subject { described_class.new.call_with_schema_validation!(reference: reference) }
+    subject { described_class.new.call(reference: reference) }
 
     let(:foo_line_number) { __LINE__ + 3 }
     let(:bar_line_number) { __LINE__ + 6 }

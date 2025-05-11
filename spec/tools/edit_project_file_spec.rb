@@ -17,14 +17,18 @@ describe Tidewave::Tools::EditProjectFile do
 
   before do
     allow(Tidewave::FileTracker).to receive(:validate_path_is_editable!)
-    allow(Tidewave::FileTracker).to receive(:file_was_read?).and_return(true)
     allow(Tidewave::FileTracker).to receive(:read_file).and_return(file_content)
     allow(Tidewave::FileTracker).to receive(:write_file)
   end
 
   it "checks if the file is editable" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path)
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, nil)
     tool.call(path: path, old_string: old_string, new_string: new_string)
+  end
+
+  it "checks if the file is editable with atime" do
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, 123)
+    tool.call(path: path, old_string: old_string, new_string: new_string, atime: 123)
   end
 
   it "reads the file content" do
@@ -38,7 +42,7 @@ describe Tidewave::Tools::EditProjectFile do
   end
 
   it "raises an error if the file is not editable" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path).and_raise(ArgumentError, "File must be read first")
+    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, nil).and_raise(ArgumentError, "File must be read first")
     expect(Tidewave::FileTracker).to receive(:write_file).never
 
     expect {
