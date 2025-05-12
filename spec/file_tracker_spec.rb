@@ -193,5 +193,40 @@ describe Tidewave::FileTracker do
       expect(File).to receive(:write).with(full_path, file_content)
       described_class.write_file(test_path, file_content)
     end
+
+    context 'with Ruby files' do
+      let(:test_path) { 'test/file.rb' }
+
+      it 'validates valid Ruby syntax' do
+        valid_ruby = "def test\n  puts 'hello'\nend"
+        expect { described_class.write_file(test_path, valid_ruby) }.not_to raise_error
+      end
+
+      it 'raises error on invalid Ruby syntax' do
+        invalid_ruby = "def test\n  puts 'hello'\n" # Missing end
+        expect {
+          described_class.write_file(test_path, invalid_ruby)
+        }.to raise_error(RuntimeError, /Invalid Ruby syntax: .+ unexpected end-of-input/m)
+      end
+
+      it 'does not write file if syntax is invalid' do
+        invalid_ruby = "def test\n  puts 'hello'\n" # Missing end
+        expect(File).not_to receive(:write)
+        begin
+          described_class.write_file(test_path, invalid_ruby)
+        rescue RuntimeError
+          # Expected error
+        end
+      end
+    end
+
+    context 'with non-Ruby files' do
+      let(:test_path) { 'test/file.txt' }
+
+      it 'skips syntax validation' do
+        invalid_ruby = "def test\n  puts 'hello'\n" # Invalid Ruby but valid text
+        expect { described_class.write_file(test_path, invalid_ruby) }.not_to raise_error
+      end
+    end
   end
 end
