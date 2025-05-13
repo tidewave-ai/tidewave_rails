@@ -10,7 +10,7 @@ module Tidewave
   class Railtie < Rails::Railtie
     config.tidewave = Tidewave::Configuration.new
 
-    initializer "tidewave.setup_mcp" do |app|
+    initializer "tidewave.setup_mcp", :group => :development do |app|
       # Prevent MCP server from being mounted if Rails is not running in development mode
       raise "For security reasons, Tidewave is only supported in development mode" unless Rails.env.development?
 
