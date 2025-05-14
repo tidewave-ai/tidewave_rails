@@ -155,16 +155,37 @@ describe Tidewave::FileTracker do
   describe '.read_file' do
     let(:test_path) { 'test/file.rb' }
     let(:full_path) { '/path/to/repo/test/file.rb' }
-    let(:file_content) { 'file content' }
+    let(:file_content) { "line1\nline2\nline3\nline4\nline5\n" }
+    let(:mtime) { Time.new(1971) }
 
     before do
       allow(described_class).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:read).with(full_path).and_return(file_content)
-      allow(File).to receive(:mtime).with(full_path).and_return(Time.new(1971))
+      allow(File).to receive(:mtime).with(full_path).and_return(mtime)
     end
 
-    it 'reads and returns the file contents' do
-      expect(described_class.read_file(test_path)).to eq([ Time.new(1971).to_i, file_content ])
+    it 'reads and returns the full file contents when no offset or count given' do
+      expect(described_class.read_file(test_path)).to eq([ mtime.to_i, file_content ])
+    end
+
+    it 'reads file contents with line_offset' do
+      expect(described_class.read_file(test_path, line_offset: 2))
+        .to eq([ mtime.to_i, "line3\nline4\nline5\n" ])
+    end
+
+    it 'reads file contents with count' do
+      expect(described_class.read_file(test_path, count: 2))
+        .to eq([ mtime.to_i, "line1\nline2\n" ])
+    end
+
+    it 'reads file contents with both line_offset and count' do
+      expect(described_class.read_file(test_path, line_offset: 1, count: 2))
+        .to eq([ mtime.to_i, "line2\nline3\n" ])
+    end
+
+    it 'handles line_offset beyond file length' do
+      expect(described_class.read_file(test_path, line_offset: 10))
+        .to eq([ mtime.to_i, "" ])
     end
   end
 

@@ -17,7 +17,8 @@ describe Tidewave::Tools::ReadProjectFile do
     it "returns the correct description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
-          Returns the contents of the given file. Matches the `resources/read` MCP method.
+          Returns the contents of the given file.
+          Supports an optional line_offset and count. To read the full file, only the path needs to be passed.
         DESCRIPTION
       )
     end
@@ -30,6 +31,14 @@ describe Tidewave::Tools::ReadProjectFile do
           path: {
             type: "string",
             description: "The path to the file to read. It is relative to the project root."
+          },
+          line_offset: {
+            type: "number",
+            description: "Optional: the starting line offset from which to read. Defaults to 0."
+          },
+          count: {
+            type: "number",
+            description: "Optional: the number of lines to read. Defaults to all."
           }
         },
         required: [ "path" ],
@@ -57,6 +66,20 @@ describe Tidewave::Tools::ReadProjectFile do
 
     it "returns the file content" do
       expect(subject.call(path: file_path)).to eq(file_content)
+    end
+
+    it "returns specific lines when line_offset and count are provided" do
+      multiline_content = "line1\nline2\nline3\nline4\nline5\n"
+      allow(File).to receive(:read).with(full_path).and_return(multiline_content)
+
+      expect(subject.call(path: file_path, line_offset: 1, count: 2)).to eq("line2\nline3\n")
+    end
+
+    it "returns lines from offset to end when only line_offset is provided" do
+      multiline_content = "line1\nline2\nline3\nline4\nline5\n"
+      allow(File).to receive(:read).with(full_path).and_return(multiline_content)
+
+      expect(subject.call(path: file_path, line_offset: 3)).to eq("line4\nline5\n")
     end
 
     it "returns the mtime in metadata" do

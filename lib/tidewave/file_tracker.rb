@@ -8,11 +8,21 @@ module Tidewave
       `git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard`.split("\n")
     end
 
-    def read_file(path)
+    def read_file(path, line_offset: 0, count: nil)
       full_path = file_full_path(path)
       # Explicitly read the mtime first to avoid race conditions
       mtime = File.mtime(full_path).to_i
-      [ mtime, File.read(full_path) ]
+      content = File.read(full_path)
+
+      if line_offset > 0 || count
+        lines = content.lines
+        start_idx = [ line_offset, 0 ].max
+        count = (count || lines.length)
+        selected_lines = lines[start_idx, count]
+        content = selected_lines ? selected_lines.join : ""
+      end
+
+      [ mtime, content ]
     end
 
     def write_file(path, content)
