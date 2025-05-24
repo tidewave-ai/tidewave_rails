@@ -5,8 +5,8 @@ module Tidewave
     extend self
 
     def project_files(glob_pattern: nil)
-      args = %w[--git-dir] + ["#{git_root}/.git", "ls-files", "--cached", "--others"]
-      args += glob_pattern ? [glob_pattern] : ["--exclude-standard"]
+      args = %w[--git-dir] + [ "#{git_root}/.git", "ls-files", "--cached", "--others" ]
+      args += glob_pattern ? [ glob_pattern ] : [ "--exclude-standard" ]
       `git #{args.join(" ")}`.split("\n")
     end
 
