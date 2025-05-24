@@ -79,20 +79,20 @@ describe Tidewave::Tools::GrepProjectFiles do
     let(:glob) { "**/*.rb" }
     let(:case_sensitive) { false }
     let(:max_results) { 100 }
-    let(:glob_tool) { instance_double(Tidewave::Tools::GlobProjectFiles) }
     let(:file_matches) { [ "file1.rb", "file2.rb" ] }
     let(:file_content) { [ "line with test_pattern in it", "another line", "test_pattern here too" ] }
+    let(:git_root) { "/path/to/repo" }
 
     before do
-      allow(Tidewave::Tools::GlobProjectFiles).to receive(:new).and_return(glob_tool)
-      allow(glob_tool).to receive(:call).and_return(file_matches)
+      allow(Tidewave::FileTracker).to receive(:git_root).and_return(git_root)
+      allow(Dir).to receive(:glob).with(glob, base: git_root).and_return(file_matches)
       allow(File).to receive(:file?).and_return(true)
       allow(File).to receive(:foreach).and_yield(file_content[0]).and_yield(file_content[1]).and_yield(file_content[2])
     end
 
     it "searches each file for the pattern" do
       file_matches.each do |file|
-        expect(File).to receive(:foreach).with(file)
+        expect(File).to receive(:foreach).with(File.join(git_root, file))
       end
 
       tool.send(:execute_grep, pattern, glob, case_sensitive, max_results)
@@ -102,7 +102,10 @@ describe Tidewave::Tools::GrepProjectFiles do
       limited_max = 1
 
       # Mock file content with multiple matches but we should only get one per file
-      expect(tool.send(:execute_grep, pattern, glob, case_sensitive, limited_max)).to include("line_number")
+      result = tool.send(:execute_grep, pattern, glob, case_sensitive, limited_max)
+      parsed = JSON.parse(result)
+      expect(parsed.length).to eq(2) # One match from each file
+      expect(parsed.first).to include("line_number")
     end
 
     context "with case sensitivity" do
