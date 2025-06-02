@@ -3,7 +3,7 @@
 require "tidewave/file_tracker"
 
 class Tidewave::Tools::GlobProjectFiles < Tidewave::Tools::Base
-  file_system_tool
+  tags :file_system_tool
 
   tool_name "glob_project_files"
   description "Searches for files matching the given glob pattern."

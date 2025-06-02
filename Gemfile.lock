@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     tidewave (0.1.2)
-      fast-mcp (~> 1.4.0)
+      fast-mcp (~> 1.5.0)
       rack (>= 2.0)
       rails (>= 7.1.0)
 
@@ -80,6 +80,8 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
+    addressable (2.8.7)
+      public_suffix (>= 2.0.2, < 7.0)
     appraisal (2.5.0)
       bundler
       rake
@@ -126,7 +128,8 @@ GEM
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
     erubi (1.13.1)
-    fast-mcp (1.4.0)
+    fast-mcp (1.5.0)
+      addressable (~> 2.8)
       base64
       dry-schema (~> 1.14)
       json (~> 2.0)
@@ -205,6 +208,7 @@ GEM
     psych (5.2.3)
       date
       stringio
+    public_suffix (6.0.2)
     racc (1.8.1)
     rack (3.1.15)
     rack-session (2.1.1)

@@ -3,7 +3,7 @@
 require "tidewave/file_tracker"
 
 class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
-  file_system_tool
+  tags :file_system_tool
 
   tool_name "edit_project_file"
   description <<~DESCRIPTION
