@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::PackageSearch do
-  describe '.file_system_tool?' do
-    it 'returns nil' do
-      expect(described_class.file_system_tool?).to be nil
+  describe 'tags' do
+    it 'does not include the file_system_tool tag' do
+      expect(described_class.tags).not_to include(:file_system_tool)
     end
   end
 

@@ -3,8 +3,11 @@
 require "fast_mcp"
 require "logger"
 require "fileutils"
-require "tidewave/tool_resolver"
 require "tidewave/configuration"
+require "active_support/core_ext/class"
+
+gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
+Dir[gem_tools_path].each { |f| require f }
 
 module Tidewave
   class Railtie < Rails::Railtie
@@ -30,9 +33,15 @@ module Tidewave
         allowed_ips: config.allowed_ips
       ) do |server|
         app.config.before_initialize do
-          # Register a custom middleware to register tools depending on `include_fs_tools` query parameter
-          server.register_tools(*Tidewave::ToolResolver::ALL_TOOLS)
-          app.middleware.use Tidewave::ToolResolver, server
+          server.filter_tools do |request, tools|
+            if request.params["include_fs_tools"] != "true"
+              tools.reject { |tool| tool.tags.include?(:file_system_tool) }
+            else
+              tools
+            end
+          end
+
+          server.register_tools(*Tidewave::Tools::Base.descendants)
         end
       end
     end

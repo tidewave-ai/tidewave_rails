@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Tidewave::Tools::GrepProjectFiles < Tidewave::Tools::Base
-  file_system_tool
+  tags :file_system_tool
 
   def self.ripgrep_executable
     @ripgrep_executable ||= `which rg`.strip

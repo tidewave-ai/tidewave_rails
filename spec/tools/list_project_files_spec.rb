@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::ListProjectFiles do
-  describe '.file_system_tool?' do
-    it 'returns true' do
-      expect(described_class.file_system_tool?).to be true
+  describe 'tags' do
+    it 'includes the file_system_tool tag' do
+      expect(described_class.tags).to include(:file_system_tool)
     end
   end
 
