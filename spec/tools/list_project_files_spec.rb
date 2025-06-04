@@ -15,16 +15,23 @@ describe Tidewave::Tools::ListProjectFiles do
 
   describe ".description" do
     it "returns the correct description" do
-      expect(described_class.description).to eq(
-        "Returns a list of all files in the project that are not ignored by .gitignore."
+      expect(described_class.description).to match(
+        "Returns a list of files in the project"
       )
     end
   end
 
   describe "#call" do
-    it 'calls project_files' do
-      expect(Tidewave::FileTracker).to receive(:project_files).and_return([ "file1.rb", "file2.rb" ])
-      expect(described_class.new.call).to eq([ "file1.rb", "file2.rb" ])
+    subject(:tool) { described_class.new }
+
+    it 'calls project_files without pattern by default' do
+      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: nil).and_return([ "file1.rb", "file2.rb" ])
+      expect(tool.call).to eq([ "file1.rb", "file2.rb" ])
+    end
+
+    it 'calls project_files with pattern when provided' do
+      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: "*.rb").and_return([ "file1.rb", "file2.rb" ])
+      expect(tool.call(glob_pattern: "*.rb")).to eq([ "file1.rb", "file2.rb" ])
     end
   end
 end

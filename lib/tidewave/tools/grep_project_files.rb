@@ -52,16 +52,18 @@ class Tidewave::Tools::GrepProjectFiles < Tidewave::Tools::Base
   end
 
   def execute_grep(pattern, glob, case_sensitive, max_results)
-    files = Tidewave::Tools::GlobProjectFiles.new.call(pattern: glob)
+    glob = "**/*" if glob.blank?
+    files = Dir.glob(glob, base: Tidewave::FileTracker.git_root)
     results = []
     files.each do |file|
-      next unless File.file?(file)
+      full_path = File.join(Tidewave::FileTracker.git_root, file)
+      next unless File.file?(full_path)
 
       begin
         file_matches = 0
         line_number = 0
 
-        File.foreach(file) do |line|
+        File.foreach(full_path) do |line|
           line_number += 1
 
           # Check if line matches pattern with proper case sensitivity

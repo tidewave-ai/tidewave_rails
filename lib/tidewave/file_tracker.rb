@@ -4,8 +4,10 @@ module Tidewave
   module FileTracker
     extend self
 
-    def project_files
-      `git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard`.split("\n")
+    def project_files(glob_pattern: nil)
+      args = %w[--git-dir] + [ "#{git_root}/.git", "ls-files", "--cached", "--others" ]
+      args += glob_pattern ? [ glob_pattern ] : [ "--exclude-standard" ]
+      `git #{args.join(" ")}`.split("\n")
     end
 
     def read_file(path, line_offset: 0, count: nil)
