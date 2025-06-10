@@ -163,7 +163,7 @@ GEM
       mime-types-data (~> 3.2025, >= 3.2025.0507)
     mime-types-data (3.2025.0507)
     mini_mime (1.1.5)
-    mini_portile2 (2.8.8)
+    mini_portile2 (2.8.9)
     minitest (5.25.5)
     net-imap (0.5.7)
       date
@@ -301,16 +301,16 @@ GEM
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
-    sqlite3 (2.5.0)
+    sqlite3 (2.7.0)
       mini_portile2 (~> 2.8.0)
-    sqlite3 (2.5.0-aarch64-linux-gnu)
-    sqlite3 (2.5.0-aarch64-linux-musl)
-    sqlite3 (2.5.0-arm-linux-gnu)
-    sqlite3 (2.5.0-arm-linux-musl)
-    sqlite3 (2.5.0-arm64-darwin)
-    sqlite3 (2.5.0-x86_64-darwin)
-    sqlite3 (2.5.0-x86_64-linux-gnu)
-    sqlite3 (2.5.0-x86_64-linux-musl)
+    sqlite3 (2.7.0-aarch64-linux-gnu)
+    sqlite3 (2.7.0-aarch64-linux-musl)
+    sqlite3 (2.7.0-arm-linux-gnu)
+    sqlite3 (2.7.0-arm-linux-musl)
+    sqlite3 (2.7.0-arm64-darwin)
+    sqlite3 (2.7.0-x86_64-darwin)
+    sqlite3 (2.7.0-x86_64-linux-gnu)
+    sqlite3 (2.7.0-x86_64-linux-musl)
     stringio (3.1.7)
     thor (1.3.2)
     timeout (0.4.3)
@@ -343,7 +343,7 @@ DEPENDENCIES
   pry
   rspec-rails
   rubocop-rails-omakase
-  sqlite3 (= 2.5.0)
+  sqlite3 (= 2.7.0)
   tidewave!
 
 BUNDLED WITH
