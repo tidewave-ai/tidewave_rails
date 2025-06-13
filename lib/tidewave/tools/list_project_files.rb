@@ -17,7 +17,7 @@ class Tidewave::Tools::ListProjectFiles < Tidewave::Tools::Base
 
   arguments do
     optional(:glob_pattern).maybe(:string).description("Optional: a glob pattern to filter the listed files. If a pattern is passed, the .gitignore check will be skipped.")
-    optional(:include_ignored).filled(:boolean).description("Optional: whether to include files that are ignored by .gitignore. Defaults to false. WARNING: Use with targeted glob patterns to avoid listing excessive files from dependencies or build directories.")
+    optional(:include_ignored).maybe(:bool).description("Optional: whether to include files that are ignored by .gitignore. Defaults to false. WARNING: Use with targeted glob patterns to avoid listing excessive files from dependencies or build directories.")
   end
 
   def call(glob_pattern: nil, include_ignored: false)
