@@ -25,13 +25,13 @@ describe Tidewave::Tools::ListProjectFiles do
     subject(:tool) { described_class.new }
 
     it 'calls project_files without pattern by default' do
-      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: nil).and_return([ "file1.rb", "file2.rb" ])
+      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: nil, include_ignored: false).and_return([ "file1.rb", "file2.rb" ])
       expect(tool.call).to eq([ "file1.rb", "file2.rb" ])
     end
 
-    it 'calls project_files with pattern when provided' do
-      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: "*.rb").and_return([ "file1.rb", "file2.rb" ])
-      expect(tool.call(glob_pattern: "*.rb")).to eq([ "file1.rb", "file2.rb" ])
+    it 'calls project_files with options provided' do
+      expect(Tidewave::FileTracker).to receive(:project_files).with(glob_pattern: "*.rb", include_ignored: true).and_return([ "file1.rb", "file2.rb" ])
+      expect(tool.call(glob_pattern: "*.rb", include_ignored: true)).to eq([ "file1.rb", "file2.rb" ])
     end
   end
 end
