@@ -42,7 +42,7 @@ module Tidewave
     end
 
     def file_full_path(path)
-      File.join(git_root, path)
+      File.expand_path(path, git_root)
     end
 
     def git_root
