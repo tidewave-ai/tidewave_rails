@@ -1,20 +1,22 @@
 # frozen_string_literal: true
 
+require "fileutils"
+
 describe Tidewave::Tools::WriteProjectFile do
-  describe 'tags' do
-    it 'includes the file_system_tool tag' do
+  describe "tags" do
+    it "includes the file_system_tool tag" do
       expect(described_class.tags).to include(:file_system_tool)
     end
   end
 
-  describe '.tool_name' do
-    it 'returns the tool name' do
-      expect(described_class.tool_name).to eq('write_project_file')
+  describe ".tool_name" do
+    it "returns the tool name" do
+      expect(described_class.tool_name).to eq("write_project_file")
     end
   end
 
-  describe '.description' do
-    it 'returns the tool description' do
+  describe ".description" do
+    it "returns the tool description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
           Writes a file to the file system. If the file already exists, it will be overwritten.
@@ -25,80 +27,113 @@ describe Tidewave::Tools::WriteProjectFile do
     end
   end
 
-  describe '#call' do
+  describe "#call" do
     subject(:tool) { described_class.new }
-    let(:path) { "test/file.rb" }
+    let(:path) { File.join("tmp", "write_project_file_test.txt") }
     let(:content) { "new file content" }
 
     before do
-      allow(Tidewave::FileTracker).to receive(:validate_path_is_writable!).and_return(true)
-      allow(Tidewave::FileTracker).to receive(:write_file)
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, "initial content")
     end
 
-    it "validates the path is writable" do
-      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path, nil)
-      tool.call(path: path, content: content)
-    end
-
-    it "validates the path is writable with atime" do
-      expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(path, 123)
-      tool.call(path: path, content: content, atime: 123)
+    after do
+      FileUtils.rm_f(path)
     end
 
     it "writes the content to the file" do
-      expect(Tidewave::FileTracker).to receive(:write_file).with(path, content)
-      tool.call(path: path, content: content)
+      result = tool.call(path: path, content: content)
+      expect(result).to eq("OK")
+
+      # Check that the file was modified correctly
+      file_content = File.read(path)
+      expect(file_content).to eq(content)
     end
 
     context "when writing different types of content" do
       it "handles empty content" do
         empty_content = ""
-        expect(Tidewave::FileTracker).to receive(:write_file).with(path, empty_content)
         tool.call(path: path, content: empty_content)
+
+        file_content = File.read(path)
+        expect(file_content).to eq(empty_content)
       end
 
       it "handles multiline content" do
         multiline_content = "line 1\nline 2\nline 3"
-        expect(Tidewave::FileTracker).to receive(:write_file).with(path, multiline_content)
         tool.call(path: path, content: multiline_content)
+
+        file_content = File.read(path)
+        expect(file_content).to eq(multiline_content)
       end
 
       it "handles content with special characters" do
         special_content = "function() { return $x + $y; }"
-        expect(Tidewave::FileTracker).to receive(:write_file).with(path, special_content)
         tool.call(path: path, content: special_content)
+
+        file_content = File.read(path)
+        expect(file_content).to eq(special_content)
       end
     end
 
     context "with different file paths" do
-      it "works with paths in subdirectories" do
-        nested_path = "deeply/nested/directory/file.rb"
+      let(:nested_path) { File.join("tmp", "deeply", "nested", "directory", "file.txt") }
 
-        expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(nested_path, nil)
-        expect(Tidewave::FileTracker).to receive(:write_file).with(nested_path, content)
-
-        tool.call(path: nested_path, content: content)
+      before do
+        FileUtils.mkdir_p(File.dirname(nested_path))
+        File.write(nested_path, "initial content")
       end
 
-      it "works with different file extensions" do
-        different_extensions = [ "test.rb", "test.js", "test.html", "test.css", "test.md" ]
+      after do
+        FileUtils.rm_f(nested_path)
+      end
 
-        different_extensions.each do |file_path|
-          expect(Tidewave::FileTracker).to receive(:validate_path_is_writable!).with(file_path, nil)
-          expect(Tidewave::FileTracker).to receive(:write_file).with(file_path, content)
+      it "works with paths in subdirectories" do
+        result = tool.call(path: nested_path, content: content)
+        expect(result).to eq("OK")
 
-          tool.call(path: file_path, content: content)
-        end
+        file_content = File.read(nested_path)
+        expect(file_content).to eq(content)
       end
     end
 
-    context "when validation fails" do
-      it "lets the validation error propagate" do
-        allow(Tidewave::FileTracker).to receive(:validate_path_is_writable!).and_raise(ArgumentError, "Validation failed")
+    context "with file modification time validation" do
+      it "raises an error if the file has been modified since last read" do
+        # Read the file to get its mtime
+        mtime, _ = Tidewave::FileTracker.read_file(path)
+
+        # Modify the file to change its mtime
+        File.write(path, "modified content")
+
+        # Set the mtime explicitly to be newer than when we read it
+        future_time = Time.now + 10
+        File.utime(future_time, future_time, path)
+
+        # Try to write with an old atime
+        expect {
+          tool.call(path: path, content: content, atime: mtime)
+        }.to raise_error(ArgumentError, /File has been modified since last read/)
+      end
+
+      it "succeeds when providing a current atime" do
+        # Read the file to get its mtime
+        mtime, _ = Tidewave::FileTracker.read_file(path)
+
+        result = tool.call(path: path, content: content, atime: mtime)
+        expect(result).to eq("OK")
+
+        file_content = File.read(path)
+        expect(file_content).to eq(content)
+      end
+    end
+
+    context "when the path is invalid" do
+      it "raises an error for paths containing '..'" do
+        invalid_path = "../outside_project.txt"
 
         expect {
-          tool.call(path: path, content: content)
-        }.to raise_error(ArgumentError, "Validation failed")
+          tool.call(path: invalid_path, content: content)
+        }.to raise_error(ArgumentError, /File path must not contain/)
       end
     end
   end
