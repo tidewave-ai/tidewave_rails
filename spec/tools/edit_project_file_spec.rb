@@ -17,7 +17,7 @@ describe Tidewave::Tools::EditProjectFile do
 
   before do
     allow(Tidewave::FileTracker).to receive(:validate_path_is_editable!)
-    allow(Tidewave::FileTracker).to receive(:read_file).and_return(file_content)
+    allow(Tidewave::FileTracker).to receive(:read_file).and_return([Time.now.to_i, file_content])
     allow(Tidewave::FileTracker).to receive(:write_file)
   end
 
