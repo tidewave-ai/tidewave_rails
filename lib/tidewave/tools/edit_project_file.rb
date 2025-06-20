@@ -33,7 +33,7 @@ class Tidewave::Tools::EditProjectFile < Tidewave::Tools::Base
     # Check if the file exists within the project root and has been read
     Tidewave::FileTracker.validate_path_is_editable!(path, atime)
 
-    old_content = Tidewave::FileTracker.read_file(path)
+    _mtime, old_content = Tidewave::FileTracker.read_file(path)
 
     # Ensure old_string is unique within the file
     scan_result = old_content.scan(old_string)
