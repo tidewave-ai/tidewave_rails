@@ -1,85 +1,60 @@
 # frozen_string_literal: true
 
+require "fileutils"
+
 describe Tidewave::Tools::EditProjectFile do
-  describe 'tags' do
-    it 'includes the file_system_tool tag' do
+  describe "tags" do
+    it "includes the file_system_tool tag" do
       expect(described_class.tags).to include(:file_system_tool)
     end
   end
 
   subject(:tool) { described_class.new }
 
-  let(:path) { "test/file.rb" }
+  let(:temp_dir) { File.join(Dir.tmpdir, "tidewave_test_#{Time.now.to_i}") }
+  let(:path) { File.join("tmp", "edit_project_file_test.txt") }
+  let(:full_path) { File.join(Tidewave::FileTracker.git_root, path) }
   let(:old_string) { "old content" }
   let(:new_string) { "new content" }
-  let(:file_content) { "some before text\nold content\nsome after text" }
-  let(:expected_content) { "some before text\nnew content\nsome after text" }
+  let(:file_content) { "some before text\n#{old_string}\nsome after text" }
+  let(:expected_content) { "some before text\n#{new_string}\nsome after text" }
 
   before do
-    allow(Tidewave::FileTracker).to receive(:validate_path_is_editable!)
-    allow(Tidewave::FileTracker).to receive(:read_file).and_return([Time.now.to_i, file_content])
-    allow(Tidewave::FileTracker).to receive(:write_file)
+    # Create tmp directory if it doesn't exist
+    FileUtils.mkdir_p(File.dirname(full_path))
+    # Write initial content to the test file
+    File.write(full_path, file_content)
   end
 
-  it "checks if the file is editable" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, nil)
-    tool.call(path: path, old_string: old_string, new_string: new_string)
+  after do
+    # Clean up test file
+    FileUtils.rm_f(full_path)
   end
 
-  it "checks if the file is editable with atime" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, 123)
-    tool.call(path: path, old_string: old_string, new_string: new_string, atime: 123)
+  it "modifies the file by replacing the old string with the new string" do
+    result = tool.call(path: path, old_string: old_string, new_string: new_string)
+    expect(result).to eq("OK")
+
+    # Check that the file was modified correctly
+    modified_content = File.read(full_path)
+    expect(modified_content).to eq(expected_content)
   end
 
-  it "reads the file content" do
-    expect(Tidewave::FileTracker).to receive(:read_file).with(path)
-    tool.call(path: path, old_string: old_string, new_string: new_string)
+  it "handles replacement with empty string" do
+    tool.call(path: path, old_string: old_string, new_string: "")
+
+    modified_content = File.read(full_path)
+    expect(modified_content).to eq("some before text\n\nsome after text")
   end
 
-  it "writes the modified content back to the file" do
-    expect(Tidewave::FileTracker).to receive(:write_file).with(path, expected_content)
-    tool.call(path: path, old_string: old_string, new_string: new_string)
-  end
+  it "handles replacement with multiline string" do
+    multiline_new = "new line 1\nnew line 2"
+    expected = "some before text\n#{multiline_new}\nsome after text"
 
-  it "raises an error if the file is not editable" do
-    expect(Tidewave::FileTracker).to receive(:validate_path_is_editable!).with(path, nil).and_raise(ArgumentError, "File must be read first")
-    expect(Tidewave::FileTracker).to receive(:write_file).never
+    tool.call(path: path, old_string: old_string, new_string: multiline_new)
 
-    expect {
-      tool.call(path: path, old_string: old_string, new_string: new_string)
-    }.to raise_error(ArgumentError, "File must be read first")
-  end
-
-  context "when modifying file content" do
-    it "replaces the old string with the new string" do
-      expect(Tidewave::FileTracker).to receive(:write_file) do |write_path, content|
-        expect(write_path).to eq(path)
-        expect(content).to eq(expected_content)
-      end
-
-      tool.call(path: path, old_string: old_string, new_string: new_string)
-    end
-
-    it "handles replacement with empty string" do
-      expect(Tidewave::FileTracker).to receive(:write_file) do |write_path, content|
-        expect(write_path).to eq(path)
-        expect(content).to eq("some before text\n\nsome after text")
-      end
-
-      tool.call(path: path, old_string: old_string, new_string: "")
-    end
-
-    it "handles replacement with multiline string" do
-      multiline_new = "new line 1\nnew line 2"
-      expected = "some before text\nnew line 1\nnew line 2\nsome after text"
-
-      expect(Tidewave::FileTracker).to receive(:write_file) do |write_path, content|
-        expect(write_path).to eq(path)
-        expect(content).to eq(expected)
-      end
-
-      tool.call(path: path, old_string: old_string, new_string: multiline_new)
-    end
+    modified_content = File.read(full_path)
+    expect(modified_content).to eq(expected)
   end
 
   context "with code that includes special regex characters" do
@@ -88,33 +63,62 @@ describe Tidewave::Tools::EditProjectFile do
     let(:new_string) { "function(arg1, arg2) { return arg1 * arg2; }" }
 
     it "correctly handles special regex characters" do
-      expect(Tidewave::FileTracker).to receive(:write_file) do |write_path, content|
-        expect(content).to eq(new_string)
-      end
-
       tool.call(path: path, old_string: old_string, new_string: new_string)
+
+      modified_content = File.read(full_path)
+      expect(modified_content).to eq(new_string)
     end
   end
 
   context "when multiple occurrences of the old_string exist" do
-    let(:file_content) { "old content\nsome middle text\nold content" }
+    let(:file_content) { "#{old_string}\nsome middle text\n#{old_string}" }
 
     it "raises ArgumentError" do
-      expect(Tidewave::FileTracker).to receive(:write_file).never
-
       expect { tool.call(path: path, old_string: old_string, new_string: new_string) }.to raise_error(ArgumentError, "old_string is not unique")
     end
   end
 
   context "when there are no occurences of the old_string" do
-    let(:file_content) { "some before text\n\nsome after text" }
-    let(:old_string) { "old content" }
-    let(:new_string) { "new content" }
+    let(:file_content) { "some before text\ndifferent content\nsome after text" }
 
     it "raises ArgumentError" do
-      expect(Tidewave::FileTracker).to receive(:write_file).never
-
       expect { tool.call(path: path, old_string: old_string, new_string: new_string) }.to raise_error(ArgumentError, "old_string is not found")
+    end
+  end
+
+  context "when the file doesn't exist" do
+    let(:nonexistent_path) { "tmp/nonexistent_file.txt" }
+
+    it "raises ArgumentError" do
+      expect { tool.call(path: nonexistent_path, old_string: old_string, new_string: new_string) }.to raise_error(ArgumentError, /File not found/)
+    end
+  end
+
+  context "with file modification time validation" do
+    it "raises an error if the file has been modified since last read" do
+      # Read the file to get its mtime
+      _, _ = Tidewave::FileTracker.read_file(path)
+
+      # Modify the file to change its mtime
+      File.write(full_path, file_content)
+      # Set the mtime explicitly to be newer than when we read it
+      future_time = Time.now + 10
+      File.utime(future_time, future_time, full_path)
+
+      # Try to edit with an old atime
+      current_time = Time.now.to_i
+      expect {
+        tool.call(path: path, old_string: old_string, new_string: new_string, atime: current_time)
+      }.to raise_error(ArgumentError, /File has been modified since last read/)
+    end
+
+    it "succeeds when providing a current atime" do
+      # Read the file to get its mtime
+      mtime, _ = Tidewave::FileTracker.read_file(path)
+
+      # Edit with the current atime
+      result = tool.call(path: path, old_string: old_string, new_string: new_string, atime: mtime)
+      expect(result).to eq("OK")
     end
   end
 end
