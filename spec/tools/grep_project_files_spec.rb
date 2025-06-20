@@ -81,10 +81,9 @@ describe Tidewave::Tools::GrepProjectFiles do
     let(:max_results) { 100 }
     let(:file_matches) { [ "file1.rb", "file2.rb" ] }
     let(:file_content) { [ "line with test_pattern in it", "another line", "test_pattern here too" ] }
-    let(:git_root) { "/path/to/repo" }
+    let(:git_root) { Dir.pwd }
 
     before do
-      allow(Tidewave::FileTracker).to receive(:git_root).and_return(git_root)
       allow(Dir).to receive(:glob).with(glob, base: git_root).and_return(file_matches)
       allow(File).to receive(:file?).and_return(true)
       allow(File).to receive(:foreach).and_yield(file_content[0]).and_yield(file_content[1]).and_yield(file_content[2])

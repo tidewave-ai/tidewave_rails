@@ -10,10 +10,7 @@ describe Tidewave::Tools::EditProjectFile do
   end
 
   subject(:tool) { described_class.new }
-
-  let(:temp_dir) { File.join(Dir.tmpdir, "tidewave_test_#{Time.now.to_i}") }
   let(:path) { File.join("tmp", "edit_project_file_test.txt") }
-  let(:full_path) { File.join(Tidewave::FileTracker.git_root, path) }
   let(:old_string) { "old content" }
   let(:new_string) { "new content" }
   let(:file_content) { "some before text\n#{old_string}\nsome after text" }
@@ -21,14 +18,14 @@ describe Tidewave::Tools::EditProjectFile do
 
   before do
     # Create tmp directory if it doesn't exist
-    FileUtils.mkdir_p(File.dirname(full_path))
+    FileUtils.mkdir_p(File.dirname(path))
     # Write initial content to the test file
-    File.write(full_path, file_content)
+    File.write(path, file_content)
   end
 
   after do
     # Clean up test file
-    FileUtils.rm_f(full_path)
+    FileUtils.rm_f(path)
   end
 
   it "modifies the file by replacing the old string with the new string" do
@@ -36,14 +33,14 @@ describe Tidewave::Tools::EditProjectFile do
     expect(result).to eq("OK")
 
     # Check that the file was modified correctly
-    modified_content = File.read(full_path)
+    modified_content = File.read(path)
     expect(modified_content).to eq(expected_content)
   end
 
   it "handles replacement with empty string" do
     tool.call(path: path, old_string: old_string, new_string: "")
 
-    modified_content = File.read(full_path)
+    modified_content = File.read(path)
     expect(modified_content).to eq("some before text\n\nsome after text")
   end
 
@@ -53,7 +50,7 @@ describe Tidewave::Tools::EditProjectFile do
 
     tool.call(path: path, old_string: old_string, new_string: multiline_new)
 
-    modified_content = File.read(full_path)
+    modified_content = File.read(path)
     expect(modified_content).to eq(expected)
   end
 
@@ -65,7 +62,7 @@ describe Tidewave::Tools::EditProjectFile do
     it "correctly handles special regex characters" do
       tool.call(path: path, old_string: old_string, new_string: new_string)
 
-      modified_content = File.read(full_path)
+      modified_content = File.read(path)
       expect(modified_content).to eq(new_string)
     end
   end
@@ -100,10 +97,10 @@ describe Tidewave::Tools::EditProjectFile do
       _, _ = Tidewave::FileTracker.read_file(path)
 
       # Modify the file to change its mtime
-      File.write(full_path, file_content)
+      File.write(path, file_content)
       # Set the mtime explicitly to be newer than when we read it
       future_time = Time.now + 10
-      File.utime(future_time, future_time, full_path)
+      File.utime(future_time, future_time, path)
 
       # Try to edit with an old atime
       current_time = Time.now.to_i

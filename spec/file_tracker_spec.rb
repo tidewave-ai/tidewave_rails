@@ -1,13 +1,9 @@
 # frozen_string_literal: true
 
 describe Tidewave::FileTracker do
-  let(:git_root) { "/path/to/repo" }
+  let(:git_root) { Dir.pwd }
 
   describe '.project_files' do
-    before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
-    end
-
     it "returns project files" do
       allow(described_class).to receive(:`).with("git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard").and_return("file1.rb\nfile2.rb\n")
       expect(described_class.project_files).to match_array([ "file1.rb", "file2.rb" ])
@@ -20,42 +16,19 @@ describe Tidewave::FileTracker do
   end
 
   describe '.git_root' do
-    before do
-      # Reset the memoized git_root to force the command to be called
-      described_class.instance_variable_set(:@git_root, nil)
-    end
-
     it 'returns the git root directory' do
-      allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").and_return("/path/to/repo\n")
-      expect(described_class.git_root).to eq("/path/to/repo")
-    end
-
-    it 'caches the git root directory' do
-      # We need to ensure the stubbing happens before the first call
-      allow(described_class).to receive(:`).with("git rev-parse --show-toplevel").once.and_return("/path/to/repo\n")
-
-      # Call it twice
-      result1 = described_class.git_root
-      result2 = described_class.git_root
-
-      # Both calls should return the same value
-      expect(result1).to eq("/path/to/repo")
-      expect(result2).to eq("/path/to/repo")
-
-      # Should only execute the command once (verified by the .once constraint above)
+      expect(described_class.git_root).to eq(Dir.pwd)
     end
   end
 
   describe '.file_full_path' do
     it 'joins the git root with the given path' do
-      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
-      expect(described_class.file_full_path("test/file.rb")).to eq("/path/to/repo/test/file.rb")
+      expect(described_class.file_full_path("test/file.rb")).to eq("#{Dir.pwd}/test/file.rb")
     end
   end
 
   describe '.validate_path_access!' do
     before do
-      allow(described_class).to receive(:git_root).and_return("/path/to/repo")
       allow(File).to receive(:exist?).and_return(true)
     end
 
@@ -66,7 +39,7 @@ describe Tidewave::FileTracker do
     end
 
     it 'raises an error if file is outside project directory' do
-      allow(described_class).to receive(:file_full_path).with("hacked/path").and_return("/outside/path/to/repo")
+      allow(described_class).to receive(:file_full_path).with("hacked/path").and_return("/outside#{Dir.pwd}")
 
       expect {
         described_class.validate_path_access!("hacked/path")
@@ -74,8 +47,8 @@ describe Tidewave::FileTracker do
     end
 
     it 'raises an error if file does not exist' do
-      allow(described_class).to receive(:file_full_path).with("missing/file.rb").and_return("/path/to/repo/missing/file.rb")
-      allow(File).to receive(:exist?).with("/path/to/repo/missing/file.rb").and_return(false)
+      allow(described_class).to receive(:file_full_path).with("missing/file.rb").and_return("#{Dir.pwd}/missing/file.rb")
+      allow(File).to receive(:exist?).with("#{Dir.pwd}/missing/file.rb").and_return(false)
 
       expect {
         described_class.validate_path_access!("missing/file.rb")
@@ -83,8 +56,8 @@ describe Tidewave::FileTracker do
     end
 
     it 'returns true if valid' do
-      allow(described_class).to receive(:file_full_path).with("valid/file.rb").and_return("/path/to/repo/valid/file.rb")
-      allow(File).to receive(:exist?).with("/path/to/repo/valid/file.rb").and_return(true)
+      allow(described_class).to receive(:file_full_path).with("valid/file.rb").and_return("#{Dir.pwd}/valid/file.rb")
+      allow(File).to receive(:exist?).with("#{Dir.pwd}/valid/file.rb").and_return(true)
 
       expect(described_class.validate_path_access!("valid/file.rb")).to be(true)
     end
@@ -92,11 +65,7 @@ describe Tidewave::FileTracker do
 
   describe '.validate_path_access!' do
     let(:test_path) { 'test/file.rb' }
-    let(:full_path) { '/path/to/repo/test/file.rb' }
-
-    before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
-    end
+    let(:full_path) { "#{Dir.pwd}/test/file.rb" }
 
     it 'succeeds at validating the path exists' do
       expect(File).to receive(:exist?).with(full_path).and_return(true)
@@ -111,10 +80,9 @@ describe Tidewave::FileTracker do
 
   describe '.validate_path_is_editable!' do
     let(:test_path) { 'test/file.rb' }
-    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:full_path) { "#{Dir.pwd}/test/file.rb" }
 
     before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:exist?).with(full_path).and_return(true)
     end
 
@@ -135,10 +103,9 @@ describe Tidewave::FileTracker do
 
   describe '.validate_path_is_writable!' do
     let(:test_path) { 'test/file.rb' }
-    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:full_path) { "#{Dir.pwd}/test/file.rb" }
 
     before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:exist?).with(full_path).and_return(false)
     end
 
@@ -159,12 +126,11 @@ describe Tidewave::FileTracker do
 
   describe '.read_file' do
     let(:test_path) { 'test/file.rb' }
-    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:full_path) { "#{Dir.pwd}/test/file.rb" }
     let(:file_content) { "line1\nline2\nline3\nline4\nline5\n" }
     let(:mtime) { Time.new(1971) }
 
     before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:read).with(full_path).and_return(file_content)
       allow(File).to receive(:mtime).with(full_path).and_return(mtime)
     end
@@ -196,12 +162,11 @@ describe Tidewave::FileTracker do
 
   describe '.write_file' do
     let(:test_path) { 'test/file.rb' }
-    let(:full_path) { '/path/to/repo/test/file.rb' }
+    let(:full_path) { "#{Dir.pwd}/test/file.rb" }
     let(:file_content) { 'new file content' }
-    let(:dirname) { '/path/to/repo/test' }
+    let(:dirname) { "#{Dir.pwd}/test" }
 
     before do
-      allow(described_class).to receive(:git_root).and_return(git_root)
       allow(FileUtils).to receive(:mkdir_p).with(dirname)
       allow(File).to receive(:write)
     end

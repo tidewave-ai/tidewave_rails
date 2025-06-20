@@ -24,6 +24,8 @@ require 'tidewave/tools/base'
 $LOAD_PATH.unshift File.expand_path('../../app', __FILE__)
 Dir[File.expand_path('../../lib/tidewave/tools/**/*.rb', __FILE__)].each { |f| require f }
 
+# Cache git root once
+Tidewave::FileTracker.git_root()
 
 RSpec.configure do |config|
   # rspec-expectations config goes here. You can use an alternate

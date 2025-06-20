@@ -52,13 +52,12 @@ describe Tidewave::Tools::ReadProjectFile do
   end
 
   describe "#call" do
-    let(:git_root) { "/path/to/repo" }
+    let(:git_root) { Dir.pwd }
     let(:file_path) { "app/models/user.rb" }
     let(:full_path) { File.join(git_root, file_path) }
     let(:file_content) { "class User < ApplicationRecord\nend\n" }
 
     before do
-      allow(Tidewave::FileTracker).to receive(:git_root).and_return(git_root)
       allow(File).to receive(:exist?).with(full_path).and_return(true)
       allow(File).to receive(:read).with(full_path).and_return(file_content)
       allow(File).to receive(:mtime).with(full_path).and_return(Time.new(1971))
