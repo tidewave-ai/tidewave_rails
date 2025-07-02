@@ -21,21 +21,19 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
   end
 
   def call(reference:)
-    file_path, line_number = get_source_location(reference)
+    file_path, line_number = self.class.get_source_location(reference)
 
     if file_path
-    {
-      file_path: file_path,
-      line_number: line_number
-    }.to_json
+      {
+        file_path: file_path,
+        line_number: line_number
+      }.to_json
     else
       raise NameError, "could not find source location for #{reference}"
     end
   end
 
-  private
-
-  def get_source_location(reference)
+  def self.get_source_location(reference)
     constant_path, selector, method_name = reference.rpartition(/\.|#/)
 
     # There are no selectors, so the method_name is a constant path
