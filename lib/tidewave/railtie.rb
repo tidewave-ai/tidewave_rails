@@ -11,7 +11,7 @@ Dir[gem_tools_path].each { |f| require f }
 
 module Tidewave
   class Railtie < Rails::Railtie
-    config.tidewave = Tidewave::Configuration.new
+    config.tidewave = Tidewave::Configuration.new(Rails.root.join("log", "tidewave.log"))
 
     initializer "tidewave.setup_mcp" do |app|
       # Prevent MCP server from being mounted if Rails is not running in development mode
