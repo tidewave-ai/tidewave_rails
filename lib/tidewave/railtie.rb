@@ -11,12 +11,11 @@ Dir[gem_tools_path].each { |f| require f }
 
 module Tidewave
   class Railtie < Rails::Railtie
-    config.tidewave = Tidewave::Configuration.new(Rails.root.join("log", "tidewave.log"))
+    config.tidewave = Tidewave::Configuration.new()
 
     initializer "tidewave.setup_mcp" do |app|
       # Prevent MCP server from being mounted if Rails is not running in development mode
       raise "For security reasons, Tidewave is only supported in development mode" unless Rails.env.development?
-
       config = app.config.tidewave
 
       # Set up MCP server with the host application
@@ -27,7 +26,7 @@ module Tidewave
         path_prefix: Tidewave::PATH_PREFIX,
         messages_route: Tidewave::MESSAGES_ROUTE,
         sse_route: Tidewave::SSE_ROUTE,
-        logger: config.logger,
+        logger: config.logger || Logger.new(Rails.root.join("log", "tidewave.log")),
         allowed_origins: config.allowed_origins,
         localhost_only: config.localhost_only,
         allowed_ips: config.allowed_ips

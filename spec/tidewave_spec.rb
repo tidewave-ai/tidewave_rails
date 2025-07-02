@@ -8,6 +8,5 @@ RSpec.describe Tidewave do
   it "injects Rails configuration" do
     config = Rails.configuration.tidewave
     expect(config).to be_a(Tidewave::Configuration)
-    expect(config.logger.instance_variable_get(:@logdev).filename).to eq(Rails.root.join("log/tidewave.log"))
   end
 end
