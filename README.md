@@ -56,6 +56,15 @@ However, it is important to note that Tidewave is not meant to be used in a prod
 
 Tidewave will raise an error if it is used in a production environment.
 
+## ORM Support
+
+Tidewave supports multiple Object-Relational Mapping (ORM) libraries:
+
+- **ActiveRecord** - Full support (Rails default)
+- **Sequel** - Full support
+
+The system automatically detects which ORM is available in your application and uses the appropriate adapter. All database-related tools work seamlessly with both ORMs.
+
 ### Web server requirements
 
 Tidewave currently requires a threaded web server like Puma.
