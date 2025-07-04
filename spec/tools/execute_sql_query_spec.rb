@@ -18,7 +18,7 @@ describe Tidewave::Tools::ExecuteSqlQuery do
     it "returns the correct description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
-          Executes the given SQL query against the ActiveRecord database connection.
+          Executes the given SQL query against the database connection.
           Returns the result as a Ruby data structure.
 
           Note that the output is limited to 50 rows at a time. If you need to see more, perform additional calls

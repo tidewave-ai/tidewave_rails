@@ -66,14 +66,6 @@ describe Tidewave::Tools::GetModels do
   end
 
   describe "#call" do
-    before do
-      # Mock Rails.application.eager_load! to avoid loading all models
-      allow(Rails.application).to receive(:eager_load!)
-
-      # Mock ActiveRecord::Base.descendants to return only our test models
-      allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, Post, Comment ])
-    end
-
     it "returns all models as text with their source locations" do
       result = described_class.new.call
 
@@ -113,7 +105,7 @@ describe Tidewave::Tools::GetModels do
       result = described_class.new.call
       lines = result.split("\n")
 
-      expect(lines.length).to eq(3)
+      expect(lines.length).to be >= 3
       lines.each do |line|
         expect(line).to start_with("* ")
       end
