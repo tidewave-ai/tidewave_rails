@@ -32,33 +32,9 @@ describe Tidewave::Tools::GetModels do
   end
 
   describe "#call" do
-    let(:user_model) { double("User", name: "User") }
-    let(:post_model) { double("Post", name: "Post") }
-    let(:comment_model) { double("Comment", name: "Comment") }
-
-    let(:models) { [ user_model, post_model, comment_model ] }
-
-    let(:has_many_association) { double("has_many_association", name: :posts, macro: :has_many) }
-    let(:belongs_to_association) { double("belongs_to_association", name: :user, macro: :belongs_to) }
-    let(:has_one_association) { double("has_one_association", name: :profile, macro: :has_one) }
-
-    before do
-      # Mock Rails.application.eager_load!
-      allow(Rails.application).to receive(:eager_load!)
-
-      # Mock ActiveRecord::Base.descendants
-      allow(ActiveRecord::Base).to receive(:descendants).and_return(models)
-
-      # Set up the relationships for each model
-      allow(user_model).to receive(:reflect_on_all_associations).and_return([ has_many_association, has_one_association ])
-
-      allow(post_model).to receive(:reflect_on_all_associations).and_return([ belongs_to_association ])
-
-      allow(comment_model).to receive(:reflect_on_all_associations).and_return([])
-    end
-
-    it "returns all models with all their relationships" do
-      expected_response = [
+    let(:database_adapter) { instance_double("Tidewave::DatabaseAdapter") }
+    let(:expected_response) do
+      [
         {
           name: "User",
           relationships: [
@@ -77,8 +53,18 @@ describe Tidewave::Tools::GetModels do
           relationships: []
         }
       ].to_json
+    end
 
-      expect(described_class.new.call).to eq(expected_response)
+    before do
+      allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(database_adapter)
+    end
+
+    it "delegates to the database adapter" do
+      expect(database_adapter).to receive(:get_models).and_return(expected_response)
+
+      result = described_class.new.call
+
+      expect(result).to eq(expected_response)
     end
   end
 end

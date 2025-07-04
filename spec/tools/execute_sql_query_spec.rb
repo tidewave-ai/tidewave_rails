@@ -18,7 +18,7 @@ describe Tidewave::Tools::ExecuteSqlQuery do
     it "returns the correct description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
-          Executes the given SQL query against the ActiveRecord database connection.
+          Executes the given SQL query against the database connection.
           Returns the result as a Ruby data structure.
 
           Note that the output is limited to 50 rows at a time. If you need to see more, perform additional calls
@@ -60,57 +60,30 @@ describe Tidewave::Tools::ExecuteSqlQuery do
   end
 
   describe "#call" do
-    let(:connection) { instance_double("ActiveRecord::ConnectionAdapters::PostgreSQLAdapter") }
-    let(:result) { instance_double("ActiveRecord::Result") }
-    let(:row_count) { 60 }
-    let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
+    let(:database_adapter) { instance_double("Tidewave::DatabaseAdapter") }
+    let(:expected_response) do
+      {
+        columns: [ "id", "name" ],
+        rows: [ [ 1, "Test 1" ], [ 2, "Test 2" ] ],
+        row_count: 2,
+        adapter: "PostgreSQL",
+        database: ":memory:"
+      }
+    end
 
     before do
-      allow(ActiveRecord::Base).to receive(:connection).and_return(connection)
-      allow(connection).to receive(:adapter_name).and_return("PostgreSQL")
-      allow(Rails).to receive_message_chain(:configuration, :database_configuration).and_return({
-        "test" => {
-          "database" => ":memory:"
-        }
-        })
-      allow(result).to receive(:columns).and_return([ "id", "name" ])
-      allow(result).to receive(:rows).and_return(rows)
+      allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(database_adapter)
     end
 
     context "with a simple query without arguments" do
       let(:query) { "SELECT * FROM users" }
 
-      it "returns the first 50 rows of the query" do
-        expect(connection).to receive(:exec_query).with(query).and_return(result)
+      it "delegates to the database adapter" do
+        expect(database_adapter).to receive(:execute_query).with(query, []).and_return(expected_response)
 
         response = described_class.new.call(query: query)
 
-        expect(response).to eq({
-          columns: [ "id", "name" ],
-          rows: rows.first(50),
-          row_count: row_count,
-          adapter: "PostgreSQL",
-          database: ":memory:"
-        })
-      end
-
-      context 'with a row_count smaller than the result limit' do
-        let(:row_count) { 10 }
-        let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
-
-        it "returns the first 50 rows of the query" do
-          expect(connection).to receive(:exec_query).with(query).and_return(result)
-
-          response = described_class.new.call(query: query)
-
-          expect(response).to eq({
-            columns: [ "id", "name" ],
-            rows: rows,
-            row_count: row_count,
-            adapter: "PostgreSQL",
-            database: ":memory:"
-          })
-        end
+        expect(response).to eq(expected_response)
       end
     end
 
@@ -118,8 +91,8 @@ describe Tidewave::Tools::ExecuteSqlQuery do
       let(:query) { "SELECT * FROM users WHERE id = $1" }
       let(:arguments) { [ 1 ] }
 
-      it "passes the arguments to the exec_query method" do
-        expect(connection).to receive(:exec_query).with(query, "SQL", arguments).and_return(result)
+      it "passes the arguments to the database adapter" do
+        expect(database_adapter).to receive(:execute_query).with(query, arguments).and_return(expected_response)
 
         described_class.new.call(query: query, arguments: arguments)
       end
@@ -130,7 +103,7 @@ describe Tidewave::Tools::ExecuteSqlQuery do
       let(:error_message) { "syntax error" }
 
       it "raises an error" do
-        expect(connection).to receive(:exec_query).and_raise(StandardError, error_message)
+        expect(database_adapter).to receive(:execute_query).and_raise(StandardError, error_message)
 
         expect { described_class.new.call(query: query) }.to raise_error(StandardError, error_message)
       end
