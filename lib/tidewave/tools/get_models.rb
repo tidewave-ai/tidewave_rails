@@ -11,7 +11,11 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     Rails.application.eager_load!
 
     models = ActiveRecord::Base.descendants.map do |model|
-      { name: model.name, relationships: get_relationships(model) }
+      {
+        name: model.name,
+        relationships: get_relationships(model),
+        source_location: Object.const_source_location(model.name).source_location.join(":")
+      }
     end
 
     models.to_json

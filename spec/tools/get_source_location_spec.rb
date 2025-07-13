@@ -69,10 +69,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule' }
 
       it "returns the correct result" do
-        expect(subject).to eq({
-          file_path: __FILE__,
-          line_number: line_number
-        }.to_json)
+        expect(subject).to eq("#{__FILE__}:#{line_number}")
       end
     end
 
@@ -96,10 +93,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule::BAZ' }
 
       it "returns the correct result" do
-        expect(subject).to eq({
-          file_path: __FILE__,
-          line_number: baz_line_number
-        }.to_json)
+        expect(subject).to eq("#{__FILE__}:#{baz_line_number}")
       end
     end
 
@@ -123,10 +117,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule.foo' }
 
       it "returns the correct result" do
-        expect(subject).to eq({
-          file_path: __FILE__,
-          line_number: foo_line_number
-        }.to_json)
+        expect(subject).to eq("#{__FILE__}:#{foo_line_number}")
       end
     end
 
@@ -142,10 +133,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule#bar' }
 
       it "returns the correct result" do
-        expect(subject).to eq({
-          file_path: __FILE__,
-          line_number: bar_line_number
-        }.to_json)
+        expect(subject).to eq("#{__FILE__}:#{bar_line_number}")
       end
     end
 

@@ -55,6 +55,11 @@ describe Tidewave::Tools::GetModels do
       allow(post_model).to receive(:reflect_on_all_associations).and_return([ belongs_to_association ])
 
       allow(comment_model).to receive(:reflect_on_all_associations).and_return([])
+
+      # Mock source location
+      allow(Object).to receive(:const_source_location).with("User").and_return(double(source_location: [ "/app/models/user.rb", 1 ]))
+      allow(Object).to receive(:const_source_location).with("Post").and_return(double(source_location: [ "/app/models/post.rb", 1 ]))
+      allow(Object).to receive(:const_source_location).with("Comment").and_return(double(source_location: [ "/app/models/comment.rb", 1 ]))
     end
 
     it "returns all models with all their relationships" do
@@ -64,17 +69,20 @@ describe Tidewave::Tools::GetModels do
           relationships: [
             { name: :posts, type: :has_many },
             { name: :profile, type: :has_one }
-          ]
+          ],
+          source_location: "/app/models/user.rb:1"
         },
         {
           name: "Post",
           relationships: [
             { name: :user, type: :belongs_to }
-          ]
+          ],
+          source_location: "/app/models/post.rb:1"
         },
         {
           name: "Comment",
-          relationships: []
+          relationships: [],
+          source_location: "/app/models/comment.rb:1"
         }
       ].to_json
 

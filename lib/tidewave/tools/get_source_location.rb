@@ -24,10 +24,7 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
     file_path, line_number = self.class.get_source_location(reference)
 
     if file_path
-      {
-        file_path: file_path,
-        line_number: line_number
-      }.to_json
+      "#{file_path}:#{line_number}"
     else
       raise NameError, "could not find source location for #{reference}"
     end
