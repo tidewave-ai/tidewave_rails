@@ -30,14 +30,13 @@ module Tidewave
       end
 
       def get_models
-        # Ensure all models are loaded
-        Rails.application.eager_load!
-
-        models = ::Sequel::Model.descendants.map do |model|
-          { name: model.name, relationships: get_relationships(model) }
-        end
-
-        models.to_json
+        ::Sequel::Model.descendants.map do |model|
+          if location = get_relative_source_location(model.name)
+            "* #{model.name} at #{location}"
+          else
+            "* #{model.name}"
+          end
+        end.join("\n")
       end
 
       def adapter_name
@@ -60,18 +59,18 @@ module Tidewave
 
       private
 
-      def get_relationships(model)
-        associations = []
+      def get_relative_source_location(model_name)
+        source_location = Object.const_source_location(model_name)
+        return nil if source_location.blank?
 
-        # Get all associations defined on the model
-        model.association_reflections.each do |name, reflection|
-          associations << {
-            name: name,
-            type: reflection[:type]
-          }
+        file_path, line_number = source_location
+        begin
+          relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
+          "#{relative_path}:#{line_number}"
+        rescue ArgumentError
+          # If the path cannot be made relative, return the absolute path
+          "#{file_path}:#{line_number}"
         end
-
-        associations.compact_blank
       end
     end
   end

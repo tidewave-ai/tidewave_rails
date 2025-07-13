@@ -25,7 +25,7 @@ module Tidewave
 
       def detect_orm
         # Check for preferred ORM setting first
-        if defined?(Rails) && Rails.respond_to?(:application) && Rails.application.config.respond_to?(:tidewave)
+        if Rails.application.config.respond_to?(:tidewave)
           preferred = Rails.application.config.tidewave.preferred_orm
           if preferred && [ :active_record, :sequel ].include?(preferred)
             return preferred if orm_available?(preferred)

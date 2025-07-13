@@ -3,92 +3,137 @@
 require "rails_helper"
 require "tidewave/database_adapters/sequel"
 
-describe Tidewave::DatabaseAdapters::Sequel do
-  before do
-    # Create Sequel module and classes for testing
-    unless defined?(::Sequel)
-      sequel_module = Module.new
+# Create mock Sequel classes for testing when Sequel gem is not available
+unless defined?(::Sequel)
+  sequel_module = Module.new
 
-      # Define Model class
-      model_class = Class.new do
-        def self.db
-          # This will be stubbed in tests
-        end
+  model_class = Class.new do
+    def self.db
+      @db ||= Sequel::Database.new
+    end
 
-        def self.descendants
-          []
-        end
-      end
+    def self.descendants
+      []
+    end
 
-      sequel_module.const_set(:Model, model_class)
-      sequel_module.const_set(:Database, Class.new)
-      sequel_module.const_set(:Dataset, Class.new)
-
-      Object.const_set(:Sequel, sequel_module)
+    def self.name
+      "SequelTestModel"
     end
   end
+
+  database_class = Class.new do
+    def initialize
+      @results = []
+    end
+
+    def fetch(query, *args)
+      # Return a simple dataset mock
+      dataset = Sequel::Dataset.new
+      dataset.instance_variable_set(:@results, mock_query_results(query, args))
+      dataset
+    end
+
+    def adapter_scheme
+      :sqlite
+    end
+
+    def opts
+      { database: ":memory:" }
+    end
+
+    private
+
+    def mock_query_results(query, args)
+      case query
+      when /SELECT 1 as id, 'test' as name/
+        [{ id: 1, name: "test" }]
+      when /SELECT \? as id, \? as name/
+        [{ id: args[0], name: args[1] }]
+      when /WITH RECURSIVE numbers/
+        60.times.map { |i| { id: i + 1, name: "Row #{i + 1}" } }
+      when /INVALID SQL SYNTAX/
+        raise "Invalid SQL"
+      else
+        []
+      end
+    end
+  end
+
+  dataset_class = Class.new do
+    def all
+      @results || []
+    end
+  end
+
+  sequel_module.const_set(:Model, model_class)
+  sequel_module.const_set(:Database, database_class)
+  sequel_module.const_set(:Dataset, dataset_class)
+
+  Object.const_set(:Sequel, sequel_module)
+end
+
+describe Tidewave::DatabaseAdapters::Sequel do
   let(:adapter) { described_class.new }
 
   describe "#execute_query" do
-    let(:database) { double("Sequel::Database") }
-    let(:dataset) { double("Sequel::Dataset") }
-    let(:row_count) { 60 }
-    let(:rows) { row_count.times.map { |i| { id: i, name: "Test #{i}" } } }
-
-    before do
-      allow(::Sequel::Model).to receive(:db).and_return(database)
-      allow(database).to receive(:adapter_scheme).and_return(:postgresql)
-      allow(database).to receive(:opts).and_return({ database: "test_database" })
-    end
-
     context "with a simple query without arguments" do
-      let(:query) { "SELECT * FROM users" }
+      let(:query) { "SELECT 1 as id, 'test' as name" }
 
-      it "returns the first 50 rows of the query" do
-        expect(database).to receive(:fetch).with(query).and_return(dataset)
-        expect(dataset).to receive(:all).and_return(rows)
-
+      it "returns the query result" do
         response = adapter.execute_query(query)
 
-        expect(response).to eq({
+        expect(response).to include(
           columns: [ "id", "name" ],
-          rows: rows.first(50).map(&:values),
-          row_count: row_count,
-          adapter: "POSTGRESQL",
-          database: "test_database"
-        })
-      end
-
-      context 'with a row_count smaller than the result limit' do
-        let(:row_count) { 10 }
-        let(:rows) { row_count.times.map { |i| { id: i, name: "Test #{i}" } } }
-
-        it "returns all rows" do
-          expect(database).to receive(:fetch).with(query).and_return(dataset)
-          expect(dataset).to receive(:all).and_return(rows)
-
-          response = adapter.execute_query(query)
-
-          expect(response).to eq({
-            columns: [ "id", "name" ],
-            rows: rows.map(&:values),
-            row_count: row_count,
-            adapter: "POSTGRESQL",
-            database: "test_database"
-          })
-        end
+          rows: [ [ 1, "test" ] ],
+          row_count: 1,
+          adapter: "SQLITE",
+          database: ":memory:"
+        )
       end
     end
 
     context "with query arguments" do
-      let(:query) { "SELECT * FROM users WHERE id = ?" }
-      let(:arguments) { [ 1 ] }
+      let(:query) { "SELECT ? as id, ? as name" }
+      let(:arguments) { [ 42, "dynamic" ] }
 
-      it "passes the arguments to the fetch method" do
-        expect(database).to receive(:fetch).with(query, *arguments).and_return(dataset)
-        expect(dataset).to receive(:all).and_return([])
+      it "passes the arguments to the query" do
+        response = adapter.execute_query(query, arguments)
 
-        adapter.execute_query(query, arguments)
+        expect(response).to include(
+          columns: [ "id", "name" ],
+          rows: [ [ 42, "dynamic" ] ],
+          row_count: 1
+        )
+      end
+    end
+
+    context "with a query returning more than 50 rows" do
+      let(:query) do
+        <<~SQL
+          WITH RECURSIVE numbers(n) AS (
+            SELECT 1
+            UNION ALL
+            SELECT n + 1 FROM numbers WHERE n < 60
+          )
+          SELECT n as id, 'Row ' || n as name FROM numbers
+        SQL
+      end
+
+      it "limits results to 50 rows" do
+        response = adapter.execute_query(query)
+
+        expect(response[:row_count]).to eq(60)
+        expect(response[:rows].length).to eq(50)
+        expect(response[:rows].first).to eq([ 1, "Row 1" ])
+        expect(response[:rows].last).to eq([ 50, "Row 50" ])
+      end
+    end
+
+    context "when the query execution fails" do
+      let(:query) { "INVALID SQL SYNTAX" }
+
+      it "raises an error" do
+        expect { adapter.execute_query(query) }.to raise_error(StandardError)
       end
     end
 
@@ -96,92 +141,63 @@ describe Tidewave::DatabaseAdapters::Sequel do
       let(:query) { "SELECT * FROM users WHERE id = -1" }
 
       it "handles empty results gracefully" do
-        expect(database).to receive(:fetch).with(query).and_return(dataset)
-        expect(dataset).to receive(:all).and_return([])
-
         response = adapter.execute_query(query)
 
-        expect(response).to eq({
+        expect(response).to include(
           columns: [],
           rows: [],
           row_count: 0,
-          adapter: "POSTGRESQL",
-          database: "test_database"
-        })
+          adapter: "SQLITE",
+          database: ":memory:"
+        )
       end
     end
   end
 
   describe "#get_models" do
-    let(:user_model) { double("User", name: "User") }
-    let(:post_model) { double("Post", name: "Post") }
-    let(:comment_model) { double("Comment", name: "Comment") }
-
-    let(:models) { [ user_model, post_model, comment_model ] }
-
-    let(:user_associations) { { posts: { type: :one_to_many }, profile: { type: :one_to_one } } }
-    let(:post_associations) { { user: { type: :many_to_one } } }
-    let(:comment_associations) { {} }
-
     before do
-      # Mock Rails.application.eager_load!
-      allow(Rails.application).to receive(:eager_load!)
+      # Create test Sequel models
+      test_model = Class.new do
+        def self.name
+          "SequelTestModel"
+        end
+      end
 
-      # Mock Sequel::Model.descendants
-      allow(::Sequel::Model).to receive(:descendants).and_return(models)
-
-      # Set up the associations for each model
-      allow(user_model).to receive(:association_reflections).and_return(user_associations)
-      allow(post_model).to receive(:association_reflections).and_return(post_associations)
-      allow(comment_model).to receive(:association_reflections).and_return(comment_associations)
+      allow(::Sequel::Model).to receive(:descendants).and_return([test_model])
+      allow(Object).to receive(:const_source_location).with("SequelTestModel").and_return([
+        "/home/filipe/projects/open_source/tidewave_rails/spec/database_adapters/sequel_spec.rb", 
+        1
+      ])
     end
 
-    it "returns all models with all their relationships" do
-      expected_response = [
-        {
-          name: "User",
-          relationships: [
-            { name: :posts, type: :one_to_many },
-            { name: :profile, type: :one_to_one }
-          ]
-        },
-        {
-          name: "Post",
-          relationships: [
-            { name: :user, type: :many_to_one }
-          ]
-        },
-        {
-          name: "Comment",
-          relationships: []
-        }
-      ].to_json
+    it "returns all models as text with their source locations" do
+      result = adapter.get_models
 
-      expect(adapter.get_models).to eq(expected_response)
+      expect(result).to be_a(String)
+      expect(result).to include("* SequelTestModel at")
+      expect(result).to include("spec/database_adapters/sequel_spec.rb")
     end
   end
 
   describe "#adapter_name" do
     it "returns the Sequel adapter name" do
-      database = double("Sequel::Database")
-      allow(::Sequel::Model).to receive(:db).and_return(database)
-      allow(database).to receive(:adapter_scheme).and_return(:postgresql)
-
-      expect(adapter.adapter_name).to eq("POSTGRESQL")
+      expect(adapter.adapter_name).to eq("SQLITE")
     end
   end
 
   describe "#database_name" do
-    let(:database) { double("Sequel::Database") }
-
-    before do
-      allow(::Sequel::Model).to receive(:db).and_return(database)
+    context "with SQLite database" do
+      it "returns the database name" do
+        expect(adapter.database_name).to eq(":memory:")
+      end
     end
 
     context "with PostgreSQL database" do
       it "returns the database name" do
-        allow(database).to receive(:adapter_scheme).and_return(:postgresql)
-        allow(database).to receive(:opts).and_return({ database: "postgres_db" })
+        db = double("Sequel::Database")
+        allow(::Sequel::Model).to receive(:db).and_return(db)
+        allow(db).to receive(:adapter_scheme).and_return(:postgresql)
+        allow(db).to receive(:opts).and_return({ database: "postgres_db" })
 
         expect(adapter.database_name).to eq("postgres_db")
       end
@@ -189,26 +205,21 @@ describe Tidewave::DatabaseAdapters::Sequel do
 
     context "with MySQL database" do
       it "returns the database name" do
-        allow(database).to receive(:adapter_scheme).and_return(:mysql2)
-        allow(database).to receive(:opts).and_return({ database: "mysql_db" })
+        db = double("Sequel::Database")
+        allow(::Sequel::Model).to receive(:db).and_return(db)
+        allow(db).to receive(:adapter_scheme).and_return(:mysql2)
+        allow(db).to receive(:opts).and_return({ database: "mysql_db" })
 
         expect(adapter.database_name).to eq("mysql_db")
       end
     end
 
-    context "with SQLite database" do
-      it "returns the database name" do
-        allow(database).to receive(:adapter_scheme).and_return(:sqlite)
-        allow(database).to receive(:opts).and_return({ database: "sqlite_db" })
-
-        expect(adapter.database_name).to eq("sqlite_db")
-      end
-    end
-
     context "with unknown database" do
       it "returns unknown" do
-        allow(database).to receive(:adapter_scheme).and_return(:unknown)
-        allow(database).to receive(:opts).and_return({})
+        db = double("Sequel::Database")
+        allow(::Sequel::Model).to receive(:db).and_return(db)
+        allow(db).to receive(:adapter_scheme).and_return(:unknown)
+        allow(db).to receive(:opts).and_return({})
 
         expect(adapter.database_name).to eq("unknown")
       end
