@@ -69,7 +69,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule' }
 
       it "returns the correct result" do
-        expect(subject).to eq("#{__FILE__}:#{line_number}")
+        expect(subject).to eq("spec/tools/get_source_location_spec.rb:#{line_number}")
       end
     end
 
@@ -93,7 +93,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule::BAZ' }
 
       it "returns the correct result" do
-        expect(subject).to eq("#{__FILE__}:#{baz_line_number}")
+        expect(subject).to eq("spec/tools/get_source_location_spec.rb:#{baz_line_number}")
       end
     end
 
@@ -117,7 +117,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule.foo' }
 
       it "returns the correct result" do
-        expect(subject).to eq("#{__FILE__}:#{foo_line_number}")
+        expect(subject).to eq("spec/tools/get_source_location_spec.rb:#{foo_line_number}")
       end
     end
 
@@ -133,7 +133,7 @@ describe Tidewave::Tools::GetSourceLocation do
       let(:reference) { 'TidewaveTestModule#bar' }
 
       it "returns the correct result" do
-        expect(subject).to eq("#{__FILE__}:#{bar_line_number}")
+        expect(subject).to eq("spec/tools/get_source_location_spec.rb:#{bar_line_number}")
       end
     end
 
@@ -142,6 +142,14 @@ describe Tidewave::Tools::GetSourceLocation do
 
       it "raises" do
         expect { subject }.to raise_error(NameError, "undefined method `unknown' for class `TidewaveTestModule'")
+      end
+    end
+
+    context "when the module is defined outside of the project root" do
+      let(:reference) { 'Gem' }
+
+      it "returns the correct result" do
+        expect(subject).to start_with("../")
       end
     end
   end

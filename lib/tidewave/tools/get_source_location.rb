@@ -24,7 +24,7 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
     file_path, line_number = self.class.get_source_location(reference)
 
     if file_path
-      "#{file_path}:#{line_number}"
+      "#{Pathname.new(file_path).relative_path_from(Rails.root)}:#{line_number}"
     else
       raise NameError, "could not find source location for #{reference}"
     end
