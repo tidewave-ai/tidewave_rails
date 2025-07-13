@@ -146,7 +146,7 @@ describe Tidewave::Tools::GetSourceLocation do
     end
 
     context "when the module is defined outside of the project root" do
-      let(:reference) { 'Gem' }
+      let(:reference) { 'Pathname' }
 
       it "returns the correct result" do
         expect(subject).to start_with("../")
