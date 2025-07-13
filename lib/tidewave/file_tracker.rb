@@ -4,6 +4,10 @@ module Tidewave
   module FileTracker
     extend self
 
+    def git_root
+      @git_root ||= File.expand_path(`git rev-parse --show-toplevel`.strip)
+    end
+
     def project_files(glob_pattern: nil, include_ignored: false)
       args = %w[--git-dir] + [ "#{git_root}/.git", "ls-files", "--cached", "--others" ]
       args << "--exclude-standard" unless include_ignored
@@ -42,11 +46,7 @@ module Tidewave
     end
 
     def file_full_path(path)
-      File.expand_path(path, git_root)
-    end
-
-    def git_root
-      @git_root ||= `git rev-parse --show-toplevel`.strip
+      File.expand_path(path, Rails.root)
     end
 
     def validate_path_access!(path, validate_existence: true)
@@ -56,10 +56,14 @@ module Tidewave
       full_path = file_full_path(path)
 
       # Verify the file is within the project directory
-      raise ArgumentError, "File path must be within the project directory" unless full_path.start_with?(git_root)
+      unless full_path.start_with?(Rails.root.to_s + File::SEPARATOR)
+        raise ArgumentError, "File path must be within the project directory"
+      end
 
       # Verify the file exists
-      raise ArgumentError, "File not found: #{path}" if validate_existence && !File.exist?(full_path)
+      if validate_existence && !File.exist?(full_path)
+        raise ArgumentError, "File not found: #{path}"
+      end
 
       true
     end
