@@ -53,7 +53,7 @@ describe Tidewave::Tools::GetModels do
     it "returns the correct description" do
       expect(described_class.description).to eq(
         <<~DESCRIPTION
-          Returns a list of all models in the application and their relationships.
+          Returns a list of all models in the application.
         DESCRIPTION
       )
     end
@@ -74,36 +74,17 @@ describe Tidewave::Tools::GetModels do
       allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, Post, Comment ])
     end
 
-    it "returns all models with all their relationships" do
+    it "returns all models as text with their source locations" do
       result = described_class.new.call
 
-      # Find each model in the result
-      user_result = result.find { |model| model[:name] == 'User' }
-      post_result = result.find { |model| model[:name] == 'Post' }
-      comment_result = result.find { |model| model[:name] == 'Comment' }
-
-      # Verify User model
-      expect(user_result[:name]).to eq('User')
-      expect(user_result[:relationships]).to contain_exactly(
-        { name: :posts, type: :has_many },
-        { name: :profile, type: :has_one }
-      )
-      expect(user_result[:source_location]).to include('spec/tools/get_models_spec.rb')
-
-      # Verify Post model
-      expect(post_result[:name]).to eq('Post')
-      expect(post_result[:relationships]).to contain_exactly(
-        { name: :user, type: :belongs_to }
-      )
-      expect(post_result[:source_location]).to include('spec/tools/get_models_spec.rb')
-
-      # Verify Comment model
-      expect(comment_result[:name]).to eq('Comment')
-      expect(comment_result[:relationships]).to eq([])
-      expect(comment_result[:source_location]).to include('spec/tools/get_models_spec.rb')
+      expect(result).to be_a(String)
+      expect(result).to include("* User at")
+      expect(result).to include("* Post at")
+      expect(result).to include("* Comment at")
+      expect(result).to include("spec/tools/get_models_spec.rb")
     end
 
-    it "handles models with missing source location array" do
+    it "handles models with missing source location" do
       # Create a model class
       empty_source_model = Class.new(ActiveRecord::Base) do
         def self.table_exists?
@@ -115,15 +96,27 @@ describe Tidewave::Tools::GetModels do
         end
       end
 
+      # Mock Object.const_source_location to return nil for this model
+      allow(Object).to receive(:const_source_location).with('EmptySourceModel').and_return(nil)
+      allow(Object).to receive(:const_source_location).with('User').and_call_original
+      allow(Object).to receive(:const_source_location).with('Post').and_call_original
+
       # Mock descendants to include our test model
       allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, empty_source_model ])
       result = described_class.new.call
 
-      # Find the model with empty source
-      empty_result = result.find { |model| model[:name] == 'EmptySourceModel' }
+      expect(result).to include("* User at")
+      expect(result).to include("* EmptySourceModel")
+    end
 
-      expect(empty_result[:name]).to eq('EmptySourceModel')
-      expect(empty_result[:source_location]).to be_nil
+    it "formats output with each model on a separate line" do
+      result = described_class.new.call
+      lines = result.split("\n")
+
+      expect(lines.length).to eq(3)
+      lines.each do |line|
+        expect(line).to start_with("* ")
+      end
     end
   end
 end
