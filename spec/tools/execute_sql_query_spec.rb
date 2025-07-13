@@ -60,79 +60,94 @@ describe Tidewave::Tools::ExecuteSqlQuery do
   end
 
   describe "#call" do
-    let(:connection) { instance_double("ActiveRecord::ConnectionAdapters::PostgreSQLAdapter") }
-    let(:result) { instance_double("ActiveRecord::Result") }
-    let(:row_count) { 60 }
-    let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
-
-    before do
-      allow(ActiveRecord::Base).to receive(:connection).and_return(connection)
-      allow(connection).to receive(:adapter_name).and_return("PostgreSQL")
-      allow(Rails).to receive_message_chain(:configuration, :database_configuration).and_return({
-        "test" => {
-          "database" => ":memory:"
-        }
-        })
-      allow(result).to receive(:columns).and_return([ "id", "name" ])
-      allow(result).to receive(:rows).and_return(rows)
-    end
-
     context "with a simple query without arguments" do
-      let(:query) { "SELECT * FROM users" }
+      let(:query) { "SELECT 1 as id, 'test' as name" }
 
-      it "returns the first 50 rows of the query" do
-        expect(connection).to receive(:exec_query).with(query).and_return(result)
-
+      it "returns the query result" do
         response = described_class.new.call(query: query)
 
-        expect(response).to eq({
+        expect(response).to include(
           columns: [ "id", "name" ],
-          rows: rows.first(50),
-          row_count: row_count,
-          adapter: "PostgreSQL",
+          rows: [ [ 1, "test" ] ],
+          row_count: 1,
+          adapter: "SQLite",
           database: ":memory:"
-        })
+        )
+      end
+    end
+
+    context "with a query returning multiple rows" do
+      let(:query) do
+        <<~SQL
+          SELECT
+            row_number() OVER () as id,
+            'User ' || row_number() OVER () as name
+          FROM (
+            SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5
+          )
+        SQL
       end
 
-      context 'with a row_count smaller than the result limit' do
-        let(:row_count) { 10 }
-        let(:rows) { row_count.times.map { |i| [ i, "Test #{i}" ] } }
+      it "returns all rows" do
+        response = described_class.new.call(query: query)
 
-        it "returns the first 50 rows of the query" do
-          expect(connection).to receive(:exec_query).with(query).and_return(result)
-
-          response = described_class.new.call(query: query)
-
-          expect(response).to eq({
-            columns: [ "id", "name" ],
-            rows: rows,
-            row_count: row_count,
-            adapter: "PostgreSQL",
-            database: ":memory:"
-          })
-        end
+        expect(response).to include(
+          columns: [ "id", "name" ],
+          row_count: 5,
+          adapter: "SQLite"
+        )
+        expect(response[:rows]).to eq([
+          [ 1, "User 1" ],
+          [ 2, "User 2" ],
+          [ 3, "User 3" ],
+          [ 4, "User 4" ],
+          [ 5, "User 5" ]
+        ])
       end
     end
 
     context "with query arguments" do
-      let(:query) { "SELECT * FROM users WHERE id = $1" }
-      let(:arguments) { [ 1 ] }
+      let(:query) { "SELECT ? as id, ? as name" }
+      let(:arguments) { [ 42, "dynamic" ] }
 
-      it "passes the arguments to the exec_query method" do
-        expect(connection).to receive(:exec_query).with(query, "SQL", arguments).and_return(result)
+      it "passes the arguments to the query" do
+        response = described_class.new.call(query: query, arguments: arguments)
 
-        described_class.new.call(query: query, arguments: arguments)
+        expect(response).to include(
+          columns: [ "id", "name" ],
+          rows: [ [ 42, "dynamic" ] ],
+          row_count: 1
+        )
       end
     end
 
     context "when the query execution fails" do
-      let(:query) { "INVALID SQL" }
-      let(:error_message) { "syntax error" }
+      let(:query) { "INVALID SQL SYNTAX" }
 
       it "raises an error" do
-        expect(connection).to receive(:exec_query).and_raise(StandardError, error_message)
+        expect { described_class.new.call(query: query) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+    end
 
-        expect { described_class.new.call(query: query) }.to raise_error(StandardError, error_message)
+    context "with a query returning more than 50 rows" do
+      let(:query) do
+        <<~SQL
+          WITH RECURSIVE numbers(n) AS (
+            SELECT 1
+            UNION ALL
+            SELECT n + 1 FROM numbers WHERE n < 60
+          )
+          SELECT n as id, 'Row ' || n as name FROM numbers
+        SQL
+      end
+
+      it "limits results to 50 rows" do
+        response = described_class.new.call(query: query)
+
+        expect(response[:row_count]).to eq(60)
+        expect(response[:rows].length).to eq(50)
+        expect(response[:rows].first).to eq([ 1, "Row 1" ])
+        expect(response[:rows].last).to eq([ 50, "Row 50" ])
       end
     end
   end
