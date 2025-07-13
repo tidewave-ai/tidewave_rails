@@ -49,7 +49,7 @@ describe Tidewave::Tools::ProjectEval do
       it "returns the correct result" do
         result = described_class.new.call(code: code)
 
-        expect(result).to eq(2)
+        expect(result).to eq("2")
       end
     end
 
@@ -59,11 +59,20 @@ describe Tidewave::Tools::ProjectEval do
       it "returns the correct result" do
         result = described_class.new.call(code: code)
 
-        expect(result).to eq({
-          stdout: "Hello, world!\n",
-          stderr: "",
-          result: nil
-        })
+        expect(result).to eq(<<~OUTPUT)
+          STDOUT:
+
+          Hello, world!
+
+
+          STDERR:
+
+
+
+          Result:
+
+
+        OUTPUT
       end
     end
 
@@ -73,11 +82,20 @@ describe Tidewave::Tools::ProjectEval do
       it "returns the correct result" do
         result = described_class.new.call(code: code)
 
-        expect(result).to eq({
-          stdout: "",
-          stderr: "Hello, world!\n",
-          result: nil
-        })
+        expect(result).to eq(<<~OUTPUT)
+          STDOUT:
+
+
+
+          STDERR:
+
+          Hello, world!
+
+
+          Result:
+
+
+        OUTPUT
       end
     end
 
@@ -87,11 +105,21 @@ describe Tidewave::Tools::ProjectEval do
       it "returns the correct result" do
         result = described_class.new.call(code: code)
 
-        expect(result).to eq({
-          stdout: "Hello, world!\n",
-          stderr: "How you doin?\n",
-          result: 2
-        })
+        expect(result).to eq(<<~OUTPUT)
+          STDOUT:
+
+          Hello, world!
+
+
+          STDERR:
+
+          How you doin?
+
+
+          Result:
+
+          2
+        OUTPUT
       end
     end
   end

@@ -32,13 +32,23 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
       stderr = stderr_capture.string
 
       if stdout.empty? && stderr.empty?
-        result
+        # We explicitly call to_s so the result is not accidentally
+        # parsed as a JSON response by FastMCP.
+        result.to_s
       else
-        {
-          stdout: stdout,
-          stderr: stderr,
-          result: result
-        }
+        <<~OUTPUT
+          STDOUT:
+
+          #{stdout}
+
+          STDERR:
+
+          #{stderr}
+
+          Result:
+
+          #{result}
+        OUTPUT
       end
     ensure
       $stdout = original_stdout

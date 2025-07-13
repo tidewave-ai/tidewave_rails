@@ -35,7 +35,6 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
       result = conn.exec_query(query)
     end
 
-
     # Format the result
     {
       columns: result.columns,
