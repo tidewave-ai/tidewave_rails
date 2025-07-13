@@ -4,12 +4,8 @@ module Tidewave
   module FileTracker
     extend self
 
-    def git_root
-      @git_root ||= File.expand_path(`git rev-parse --show-toplevel`.strip)
-    end
-
     def project_files(glob_pattern: nil, include_ignored: false)
-      args = %w[--git-dir] + [ "#{git_root}/.git", "ls-files", "--cached", "--others" ]
+      args = [ "ls-files", "--cached", "--others" ]
       args << "--exclude-standard" unless include_ignored
       args << glob_pattern if glob_pattern
       `git #{args.join(" ")}`.split("\n")

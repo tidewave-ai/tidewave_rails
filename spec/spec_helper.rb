@@ -22,8 +22,6 @@ require 'fast_mcp'
 require 'rails_helper'
 require 'tidewave'
 
-Tidewave::FileTracker.git_root()
-
 RSpec.configure do |config|
   # rspec-expectations config goes here. You can use an alternate
   # assertion/expectation library such as wrong or the stdlib/minitest

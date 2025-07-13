@@ -5,19 +5,13 @@ describe Tidewave::FileTracker do
 
   describe '.project_files' do
     it "returns project files" do
-      allow(described_class).to receive(:`).with("git --git-dir #{git_root}/.git ls-files --cached --others --exclude-standard").and_return("file1.rb\nfile2.rb\n")
+      allow(described_class).to receive(:`).with("git ls-files --cached --others --exclude-standard").and_return("file1.rb\nfile2.rb\n")
       expect(described_class.project_files).to match_array([ "file1.rb", "file2.rb" ])
     end
 
     it "accepts options" do
-      allow(described_class).to receive(:`).with("git --git-dir #{git_root}/.git ls-files --cached --others *.rb").and_return("file1.rb\nfile2.rb\n")
+      allow(described_class).to receive(:`).with("git ls-files --cached --others *.rb").and_return("file1.rb\nfile2.rb\n")
       expect(described_class.project_files(glob_pattern: "*.rb", include_ignored: true)).to match_array([ "file1.rb", "file2.rb" ])
-    end
-  end
-
-  describe '.git_root' do
-    it 'returns the git root directory' do
-      expect(described_class.git_root).to eq(Dir.pwd)
     end
   end
 
