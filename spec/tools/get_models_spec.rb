@@ -2,6 +2,40 @@
 
 require "rails_helper"
 
+# Define test models for this spec
+class User < ActiveRecord::Base
+  def self.table_exists?
+    false
+  end
+
+  has_many :posts, class_name: 'Post', foreign_key: 'user_id'
+  has_one :profile, class_name: 'Profile', foreign_key: 'user_id'
+end
+
+class Post < ActiveRecord::Base
+  def self.table_exists?
+    false
+  end
+
+  belongs_to :user, class_name: 'User', foreign_key: 'user_id'
+end
+
+class Comment < ActiveRecord::Base
+  def self.table_exists?
+    false
+  end
+
+  # No associations
+end
+
+class Profile < ActiveRecord::Base
+  def self.table_exists?
+    false
+  end
+
+  belongs_to :user, class_name: 'User', foreign_key: 'user_id'
+end
+
 describe Tidewave::Tools::GetModels do
   describe 'tags' do
     it 'does not include the file_system_tool tag' do
@@ -32,61 +66,64 @@ describe Tidewave::Tools::GetModels do
   end
 
   describe "#call" do
-    let(:user_model) { double("User", name: "User") }
-    let(:post_model) { double("Post", name: "Post") }
-    let(:comment_model) { double("Comment", name: "Comment") }
-
-    let(:models) { [ user_model, post_model, comment_model ] }
-
-    let(:has_many_association) { double("has_many_association", name: :posts, macro: :has_many) }
-    let(:belongs_to_association) { double("belongs_to_association", name: :user, macro: :belongs_to) }
-    let(:has_one_association) { double("has_one_association", name: :profile, macro: :has_one) }
-
     before do
-      # Mock Rails.application.eager_load!
+      # Mock Rails.application.eager_load! to avoid loading all models
       allow(Rails.application).to receive(:eager_load!)
 
-      # Mock ActiveRecord::Base.descendants
-      allow(ActiveRecord::Base).to receive(:descendants).and_return(models)
-
-      # Set up the relationships for each model
-      allow(user_model).to receive(:reflect_on_all_associations).and_return([ has_many_association, has_one_association ])
-
-      allow(post_model).to receive(:reflect_on_all_associations).and_return([ belongs_to_association ])
-
-      allow(comment_model).to receive(:reflect_on_all_associations).and_return([])
-
-      # Mock source location
-      allow(Object).to receive(:const_source_location).with("User").and_return(double(source_location: [ "/app/models/user.rb", 1 ]))
-      allow(Object).to receive(:const_source_location).with("Post").and_return(double(source_location: [ "/app/models/post.rb", 1 ]))
-      allow(Object).to receive(:const_source_location).with("Comment").and_return(double(source_location: [ "/app/models/comment.rb", 1 ]))
+      # Mock ActiveRecord::Base.descendants to return only our test models
+      allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, Post, Comment ])
     end
 
     it "returns all models with all their relationships" do
-      expected_response = [
-        {
-          name: "User",
-          relationships: [
-            { name: :posts, type: :has_many },
-            { name: :profile, type: :has_one }
-          ],
-          source_location: "/app/models/user.rb:1"
-        },
-        {
-          name: "Post",
-          relationships: [
-            { name: :user, type: :belongs_to }
-          ],
-          source_location: "/app/models/post.rb:1"
-        },
-        {
-          name: "Comment",
-          relationships: [],
-          source_location: "/app/models/comment.rb:1"
-        }
-      ].to_json
+      result = JSON.parse(described_class.new.call)
 
-      expect(described_class.new.call).to eq(expected_response)
+      # Find each model in the result
+      user_result = result.find { |model| model['name'] == 'User' }
+      post_result = result.find { |model| model['name'] == 'Post' }
+      comment_result = result.find { |model| model['name'] == 'Comment' }
+
+      # Verify User model
+      expect(user_result['name']).to eq('User')
+      expect(user_result['relationships']).to contain_exactly(
+        { 'name' => 'posts', 'type' => 'has_many' },
+        { 'name' => 'profile', 'type' => 'has_one' }
+      )
+      expect(user_result['source_location']).to include('spec/tools/get_models_spec.rb')
+
+      # Verify Post model
+      expect(post_result['name']).to eq('Post')
+      expect(post_result['relationships']).to contain_exactly(
+        { 'name' => 'user', 'type' => 'belongs_to' }
+      )
+      expect(post_result['source_location']).to include('spec/tools/get_models_spec.rb')
+
+      # Verify Comment model
+      expect(comment_result['name']).to eq('Comment')
+      expect(comment_result['relationships']).to eq([])
+      expect(comment_result['source_location']).to include('spec/tools/get_models_spec.rb')
+    end
+
+    it "handles models with missing source location array" do
+      # Create a model class
+      empty_source_model = Class.new(ActiveRecord::Base) do
+        def self.table_exists?
+          false
+        end
+
+        def self.name
+          'EmptySourceModel'
+        end
+      end
+
+      # Mock descendants to include our test model
+      allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, empty_source_model ])
+      result = JSON.parse(described_class.new.call)
+
+      # Find the model with empty source
+      empty_result = result.find { |model| model['name'] == 'EmptySourceModel' }
+
+      expect(empty_result['name']).to eq('EmptySourceModel')
+      expect(empty_result['source_location']).to be_nil
     end
   end
 end

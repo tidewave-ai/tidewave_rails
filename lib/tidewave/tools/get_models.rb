@@ -14,7 +14,7 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
       {
         name: model.name,
         relationships: get_relationships(model),
-        source_location: Object.const_source_location(model.name).source_location.join(":")
+        source_location: get_relative_source_location(model.name)
       }
     end
 
@@ -22,6 +22,18 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
   end
 
   private
+
+  def get_relative_source_location(model_name)
+    source_location = Object.const_source_location(model_name)
+    return nil if source_location.blank?
+
+    file_path, line_number = source_location
+    relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
+    "#{relative_path}:#{line_number}"
+  rescue ArgumentError
+    # If the path cannot be made relative, return the absolute path
+    "#{file_path}:#{line_number}"
+  end
 
   def get_relationships(model)
     model.reflect_on_all_associations.map do |association|
