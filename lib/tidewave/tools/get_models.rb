@@ -10,15 +10,13 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     # Ensure all models are loaded
     Rails.application.eager_load!
 
-    models = ActiveRecord::Base.descendants.map do |model|
+    ActiveRecord::Base.descendants.map do |model|
       {
         name: model.name,
         relationships: get_relationships(model),
         source_location: get_relative_source_location(model.name)
       }
     end
-
-    models.to_json
   end
 
   private

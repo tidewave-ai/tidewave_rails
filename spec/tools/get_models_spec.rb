@@ -75,32 +75,32 @@ describe Tidewave::Tools::GetModels do
     end
 
     it "returns all models with all their relationships" do
-      result = JSON.parse(described_class.new.call)
+      result = described_class.new.call
 
       # Find each model in the result
-      user_result = result.find { |model| model['name'] == 'User' }
-      post_result = result.find { |model| model['name'] == 'Post' }
-      comment_result = result.find { |model| model['name'] == 'Comment' }
+      user_result = result.find { |model| model[:name] == 'User' }
+      post_result = result.find { |model| model[:name] == 'Post' }
+      comment_result = result.find { |model| model[:name] == 'Comment' }
 
       # Verify User model
-      expect(user_result['name']).to eq('User')
-      expect(user_result['relationships']).to contain_exactly(
-        { 'name' => 'posts', 'type' => 'has_many' },
-        { 'name' => 'profile', 'type' => 'has_one' }
+      expect(user_result[:name]).to eq('User')
+      expect(user_result[:relationships]).to contain_exactly(
+        { name: :posts, type: :has_many },
+        { name: :profile, type: :has_one }
       )
-      expect(user_result['source_location']).to include('spec/tools/get_models_spec.rb')
+      expect(user_result[:source_location]).to include('spec/tools/get_models_spec.rb')
 
       # Verify Post model
-      expect(post_result['name']).to eq('Post')
-      expect(post_result['relationships']).to contain_exactly(
-        { 'name' => 'user', 'type' => 'belongs_to' }
+      expect(post_result[:name]).to eq('Post')
+      expect(post_result[:relationships]).to contain_exactly(
+        { name: :user, type: :belongs_to }
       )
-      expect(post_result['source_location']).to include('spec/tools/get_models_spec.rb')
+      expect(post_result[:source_location]).to include('spec/tools/get_models_spec.rb')
 
       # Verify Comment model
-      expect(comment_result['name']).to eq('Comment')
-      expect(comment_result['relationships']).to eq([])
-      expect(comment_result['source_location']).to include('spec/tools/get_models_spec.rb')
+      expect(comment_result[:name]).to eq('Comment')
+      expect(comment_result[:relationships]).to eq([])
+      expect(comment_result[:source_location]).to include('spec/tools/get_models_spec.rb')
     end
 
     it "handles models with missing source location array" do
@@ -117,13 +117,13 @@ describe Tidewave::Tools::GetModels do
 
       # Mock descendants to include our test model
       allow(ActiveRecord::Base).to receive(:descendants).and_return([ User, empty_source_model ])
-      result = JSON.parse(described_class.new.call)
+      result = described_class.new.call
 
       # Find the model with empty source
-      empty_result = result.find { |model| model['name'] == 'EmptySourceModel' }
+      empty_result = result.find { |model| model[:name] == 'EmptySourceModel' }
 
-      expect(empty_result['name']).to eq('EmptySourceModel')
-      expect(empty_result['source_location']).to be_nil
+      expect(empty_result[:name]).to eq('EmptySourceModel')
+      expect(empty_result[:source_location]).to be_nil
     end
   end
 end
