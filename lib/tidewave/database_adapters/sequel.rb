@@ -1,11 +1,5 @@
 # frozen_string_literal: true
 
-begin
-  require "sequel"
-rescue LoadError
-  # Sequel gem not available
-end
-
 module Tidewave
   module DatabaseAdapters
     class Sequel < DatabaseAdapter

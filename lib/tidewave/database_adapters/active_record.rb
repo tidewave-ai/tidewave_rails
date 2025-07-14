@@ -1,11 +1,5 @@
 # frozen_string_literal: true
 
-begin
-  require "active_record"
-rescue LoadError
-  # ActiveRecord gem not available
-end
-
 module Tidewave
   module DatabaseAdapters
     class ActiveRecord < DatabaseAdapter
