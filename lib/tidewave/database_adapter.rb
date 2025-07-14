@@ -26,8 +26,8 @@ module Tidewave
       raise NotImplementedError, "Subclasses must implement execute_query"
     end
 
-    def get_models
-      raise NotImplementedError, "Subclasses must implement get_models"
+    def get_base_class
+      raise NotImplementedError, "Subclasses must implement get_base_class"
     end
 
     def adapter_name

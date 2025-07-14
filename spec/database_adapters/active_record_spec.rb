@@ -69,15 +69,11 @@ describe Tidewave::DatabaseAdapters::ActiveRecord do
     end
   end
 
-  describe "#get_models" do
-    it "returns all models as text with their source locations" do
-      result = adapter.get_models
+  describe "#get_base_class" do
+    it "returns the ActiveRecord::Base class" do
+      result = adapter.get_base_class
 
-      expect(result).to be_a(String)
-      expect(result).to include("* User at")
-      expect(result).to include("* Post at")
-      expect(result).to include("* Comment at")
-      expect(result).to include("spec/tools/get_models_spec.rb")
+      expect(result).to eq(::ActiveRecord::Base)
     end
   end
 

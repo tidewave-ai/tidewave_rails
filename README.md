@@ -63,7 +63,16 @@ Tidewave supports multiple Object-Relational Mapping (ORM) libraries:
 - **ActiveRecord** - Full support (Rails default)
 - **Sequel** - Full support
 
-The system automatically detects which ORM is available in your application and uses the appropriate adapter. All database-related tools work seamlessly with both ORMs.
+The system defaults to ActiveRecord but can be configured to use Sequel. All database-related tools work seamlessly with both ORMs.
+
+### Configuration
+
+You can specify which ORM to use by setting the `preferred_orm` configuration:
+
+```ruby
+# config/application.rb or config/environments/development.rb
+config.tidewave.preferred_orm = :sequel  # or :active_record (default)
+```
 
 ### Web server requirements
 

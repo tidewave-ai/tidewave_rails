@@ -1,5 +1,11 @@
 # frozen_string_literal: true
 
+begin
+  require "sequel"
+rescue LoadError
+  # Sequel gem not available
+end
+
 module Tidewave
   module DatabaseAdapters
     class Sequel < DatabaseAdapter
@@ -29,14 +35,8 @@ module Tidewave
         }
       end
 
-      def get_models
-        ::Sequel::Model.descendants.map do |model|
-          if location = get_relative_source_location(model.name)
-            "* #{model.name} at #{location}"
-          else
-            "* #{model.name}"
-          end
-        end.join("\n")
+      def get_base_class
+        ::Sequel::Model
       end
 
       def adapter_name
@@ -54,22 +54,6 @@ module Tidewave
           db.opts[:database]
         else
           db.opts[:database] || "unknown"
-        end
-      end
-
-      private
-
-      def get_relative_source_location(model_name)
-        source_location = Object.const_source_location(model_name)
-        return nil if source_location.blank?
-
-        file_path, line_number = source_location
-        begin
-          relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
-          "#{relative_path}:#{line_number}"
-        rescue ArgumentError
-          # If the path cannot be made relative, return the absolute path
-          "#{file_path}:#{line_number}"
         end
       end
     end

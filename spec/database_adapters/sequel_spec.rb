@@ -46,9 +46,9 @@ unless defined?(::Sequel)
     def mock_query_results(query, args)
       case query
       when /SELECT 1 as id, 'test' as name/
-        [{ id: 1, name: "test" }]
+        [ { id: 1, name: "test" } ]
       when /SELECT \? as id, \? as name/
-        [{ id: args[0], name: args[1] }]
+        [ { id: args[0], name: args[1] } ]
       when /WITH RECURSIVE numbers/
         60.times.map { |i| { id: i + 1, name: "Row #{i + 1}" } }
       when /INVALID SQL SYNTAX/
@@ -154,28 +154,11 @@ describe Tidewave::DatabaseAdapters::Sequel do
     end
   end
 
-  describe "#get_models" do
-    before do
-      # Create test Sequel models
-      test_model = Class.new do
-        def self.name
-          "SequelTestModel"
-        end
-      end
+  describe "#get_base_class" do
+    it "returns the Sequel::Model base class" do
+      result = adapter.get_base_class
 
-      allow(::Sequel::Model).to receive(:descendants).and_return([test_model])
-      allow(Object).to receive(:const_source_location).with("SequelTestModel").and_return([
-        "/home/filipe/projects/open_source/tidewave_rails/spec/database_adapters/sequel_spec.rb", 
-        1
-      ])
-    end
-
-    it "returns all models as text with their source locations" do
-      result = adapter.get_models
-
-      expect(result).to be_a(String)
-      expect(result).to include("* SequelTestModel at")
-      expect(result).to include("spec/database_adapters/sequel_spec.rb")
+      expect(result).to eq(::Sequel::Model)
     end
   end
 
