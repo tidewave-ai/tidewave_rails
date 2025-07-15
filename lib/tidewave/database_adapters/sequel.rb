@@ -38,17 +38,7 @@ module Tidewave
       end
 
       def database_name
-        db = ::Sequel::Model.db
-        case db.adapter_scheme
-        when :postgres, :postgresql
-          db.opts[:database]
-        when :mysql, :mysql2
-          db.opts[:database]
-        when :sqlite
-          db.opts[:database]
-        else
-          db.opts[:database] || "unknown"
-        end
+        ::Sequel::Model.db.opts[:database]
       end
     end
   end
