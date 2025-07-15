@@ -9,7 +9,7 @@ module Tidewave
       @allowed_origins = nil
       @localhost_only = true
       @allowed_ips = nil
-      @preferred_orm = :active_record # Default to :active_record, can be :sequel
+      @preferred_orm = :active_record
     end
   end
 end
