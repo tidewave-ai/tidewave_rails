@@ -30,6 +30,8 @@ module Tidewave
       raise NotImplementedError, "Subclasses must implement get_base_class"
     end
 
+    private
+
     def adapter_name
       raise NotImplementedError, "Subclasses must implement adapter_name"
     end

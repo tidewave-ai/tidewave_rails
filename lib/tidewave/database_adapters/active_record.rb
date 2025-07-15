@@ -29,6 +29,8 @@ module Tidewave
         ::ActiveRecord::Base
       end
 
+      private
+
       def adapter_name
         ::ActiveRecord::Base.connection.adapter_name
       end

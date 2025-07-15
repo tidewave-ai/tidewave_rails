@@ -33,6 +33,8 @@ module Tidewave
         ::Sequel::Model
       end
 
+      private
+
       def adapter_name
         ::Sequel::Model.db.adapter_scheme.to_s.upcase
       end
