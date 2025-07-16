@@ -303,6 +303,8 @@ GEM
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    sequel (5.94.0)
+      bigdecimal
     sqlite3 (2.7.0)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.7.0-aarch64-linux-gnu)
@@ -345,6 +347,7 @@ DEPENDENCIES
   pry
   rspec-rails
   rubocop-rails-omakase
+  sequel
   sqlite3 (= 2.7.0)
   tidewave!
 

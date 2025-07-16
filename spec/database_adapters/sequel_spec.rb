@@ -1,79 +1,47 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "sequel"
 require "tidewave/database_adapters/sequel"
 
-# Create mock Sequel classes for testing when Sequel gem is not available
-unless defined?(::Sequel)
-  sequel_module = Module.new
-
-  model_class = Class.new do
-    def self.db
-      @db ||= Sequel::Database.new
-    end
-
-    def self.descendants
-      []
-    end
-
-    def self.name
-      "SequelTestModel"
-    end
-  end
-
-  database_class = Class.new do
-    def initialize
-      @results = []
-    end
-
-    def fetch(query, *args)
-      # Return a simple dataset mock
-      dataset = Sequel::Dataset.new
-      dataset.instance_variable_set(:@results, mock_query_results(query, args))
-      dataset
-    end
-
-    def adapter_scheme
-      :sqlite
-    end
-
-    def opts
-      { database: ":memory:" }
-    end
-
-    private
-
-    def mock_query_results(query, args)
-      case query
-      when /SELECT 1 as id, 'test' as name/
-        [ { id: 1, name: "test" } ]
-      when /SELECT \? as id, \? as name/
-        [ { id: args[0], name: args[1] } ]
-      when /WITH RECURSIVE numbers/
-        60.times.map { |i| { id: i + 1, name: "Row #{i + 1}" } }
-      when /INVALID SQL SYNTAX/
-        raise "Invalid SQL"
-      else
-        []
-      end
-    end
-  end
-
-  dataset_class = Class.new do
-    def all
-      @results || []
-    end
-  end
-
-  sequel_module.const_set(:Model, model_class)
-  sequel_module.const_set(:Database, database_class)
-  sequel_module.const_set(:Dataset, dataset_class)
-
-  Object.const_set(:Sequel, sequel_module)
-end
-
 describe Tidewave::DatabaseAdapters::Sequel do
+  let(:db) { Sequel.sqlite }
   let(:adapter) { described_class.new }
+
+  # Mock Sequel::Model to use our test database
+  before do
+    allow(::Sequel::Model).to receive(:db).and_return(db)
+
+    # Create test tables
+    db.create_table? :users do
+      primary_key :id
+      String :name
+    end
+
+    db.create_table? :posts do
+      primary_key :id
+      String :title
+      String :content
+    end
+
+    # Insert test data
+    db[:users].insert(id: 1, name: "test")
+    db[:users].insert(id: 2, name: "user2")
+
+    50.times do |i|
+      db[:posts].insert(id: i + 1, title: "Post #{i + 1}", content: "Content #{i + 1}")
+    end
+
+    # Insert 10 more posts to test the 50 row limit
+    10.times do |i|
+      db[:posts].insert(id: i + 51, title: "Post #{i + 51}", content: "Content #{i + 51}")
+    end
+  end
+
+  after do
+    db.drop_table? :users
+    db.drop_table? :posts
+  end
 
   describe "#execute_query" do
     context "with a simple query without arguments" do
@@ -87,7 +55,7 @@ describe Tidewave::DatabaseAdapters::Sequel do
           rows: [ [ 1, "test" ] ],
           row_count: 1,
           adapter: "SQLITE",
-          database: ":memory:"
+          database: nil
         )
       end
     end
@@ -108,32 +76,24 @@ describe Tidewave::DatabaseAdapters::Sequel do
     end
 
     context "with a query returning more than 50 rows" do
-      let(:query) do
-        <<~SQL
-          WITH RECURSIVE numbers(n) AS (
-            SELECT 1
-            UNION ALL
-            SELECT n + 1 FROM numbers WHERE n < 60
-          )
-          SELECT n as id, 'Row ' || n as name FROM numbers
-        SQL
-      end
+      let(:query) { "SELECT * FROM posts ORDER BY id" }
 
       it "limits results to 50 rows" do
         response = adapter.execute_query(query)
 
         expect(response[:row_count]).to eq(60)
         expect(response[:rows].length).to eq(50)
-        expect(response[:rows].first).to eq([ 1, "Row 1" ])
-        expect(response[:rows].last).to eq([ 50, "Row 50" ])
+        expect(response[:columns]).to eq([ "id", "title", "content" ])
+        expect(response[:rows].first).to eq([ 1, "Post 1", "Content 1" ])
+        expect(response[:rows].last).to eq([ 50, "Post 50", "Content 50" ])
       end
     end
 
     context "when the query execution fails" do
-      let(:query) { "INVALID SQL SYNTAX" }
+      let(:query) { "SELECT * FROM nonexistent_table" }
 
       it "raises an error" do
-        expect { adapter.execute_query(query) }.to raise_error(StandardError)
+        expect { adapter.execute_query(query) }.to raise_error(Sequel::DatabaseError)
       end
     end
 
@@ -148,7 +108,23 @@ describe Tidewave::DatabaseAdapters::Sequel do
           rows: [],
           row_count: 0,
           adapter: "SQLITE",
-          database: ":memory:"
+          database: nil
+        )
+      end
+    end
+
+    context "with existing data" do
+      let(:query) { "SELECT * FROM users ORDER BY id" }
+
+      it "returns actual data from the database" do
+        response = adapter.execute_query(query)
+
+        expect(response).to include(
+          columns: [ "id", "name" ],
+          rows: [ [ 1, "test" ], [ 2, "user2" ] ],
+          row_count: 2,
+          adapter: "SQLITE",
+          database: nil
         )
       end
     end

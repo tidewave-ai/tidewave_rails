@@ -17,4 +17,5 @@ group :development, :test do
   gem "rspec-rails"
   gem "pry"
   gem "appraisal"
+  gem "sequel"
 end
