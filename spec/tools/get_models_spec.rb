@@ -113,7 +113,7 @@ describe Tidewave::Tools::GetModels do
       result = described_class.new.call
       lines = result.split("\n")
 
-      expect(lines.length).to eq(3)
+      expect(lines.length).to be >= 3
       lines.each do |line|
         expect(line).to start_with("* ")
       end

@@ -3,7 +3,7 @@
 class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
   tool_name "execute_sql_query"
   description <<~DESCRIPTION
-    Executes the given SQL query against the ActiveRecord database connection.
+    Executes the given SQL query against the database connection.
     Returns the result as a Ruby data structure.
 
     Note that the output is limited to 50 rows at a time. If you need to see more, perform additional calls
@@ -25,23 +25,6 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
   RESULT_LIMIT = 50
 
   def call(query:, arguments: [])
-    # Get the ActiveRecord connection
-    conn = ActiveRecord::Base.connection
-
-    # Execute the query with prepared statement and arguments
-    if arguments.any?
-      result = conn.exec_query(query, "SQL", arguments)
-    else
-      result = conn.exec_query(query)
-    end
-
-    # Format the result
-    {
-      columns: result.columns,
-      rows: result.rows.first(RESULT_LIMIT),
-      row_count: result.rows.length,
-      adapter: conn.adapter_name,
-      database: Rails.configuration.database_configuration.dig(Rails.env, "database")
-    }
+    Tidewave::DatabaseAdapter.current.execute_query(query, arguments)
   end
 end

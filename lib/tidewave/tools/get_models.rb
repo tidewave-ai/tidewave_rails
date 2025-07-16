@@ -10,7 +10,8 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     # Ensure all models are loaded
     Rails.application.eager_load!
 
-    ActiveRecord::Base.descendants.map do |model|
+    base_class = Tidewave::DatabaseAdapter.current.get_base_class
+    base_class.descendants.map do |model|
       if location = get_relative_source_location(model.name)
         "* #{model.name} at #{location}"
       else
@@ -26,7 +27,12 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     return nil if source_location.blank?
 
     file_path, line_number = source_location
-    relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
-    "#{relative_path}:#{line_number}"
+    begin
+      relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
+      "#{relative_path}:#{line_number}"
+    rescue ArgumentError
+      # If the path cannot be made relative, return the absolute path
+      "#{file_path}:#{line_number}"
+    end
   end
 end
