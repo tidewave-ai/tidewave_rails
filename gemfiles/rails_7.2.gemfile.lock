@@ -163,6 +163,7 @@ GEM
       mime-types-data (~> 3.2015)
     mime-types-data (3.2025.0429)
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (5.25.5)
     net-imap (0.5.8)
       date
@@ -174,6 +175,9 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     nio4r (2.7.4)
+    nokogiri (1.18.8)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.18.8-aarch64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.18.8-aarch64-linux-musl)
@@ -297,6 +301,10 @@ GEM
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    sequel (5.94.0)
+      bigdecimal
+    sqlite3 (2.7.0)
+      mini_portile2 (~> 2.8.0)
     sqlite3 (2.7.0-aarch64-linux-gnu)
     sqlite3 (2.7.0-aarch64-linux-musl)
     sqlite3 (2.7.0-arm-linux-gnu)
@@ -326,6 +334,7 @@ PLATFORMS
   arm-linux-gnu
   arm-linux-musl
   arm64-darwin
+  ruby
   x86_64-darwin
   x86_64-linux-gnu
   x86_64-linux-musl
@@ -336,6 +345,7 @@ DEPENDENCIES
   rails (~> 7.2.0)
   rspec-rails
   rubocop-rails-omakase
+  sequel
   sqlite3 (= 2.7.0)
   tidewave!
 
