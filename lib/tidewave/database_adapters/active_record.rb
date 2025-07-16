@@ -31,10 +31,6 @@ module Tidewave
 
       private
 
-      def adapter_name
-        ::ActiveRecord::Base.connection.adapter_name
-      end
-
       def database_name
         Rails.configuration.database_configuration.dig(Rails.env, "database")
       end

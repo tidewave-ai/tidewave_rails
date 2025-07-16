@@ -39,11 +39,13 @@ You may configure the `tidewave` using the following syntax:
 
 The following options are available:
 
-  * `:allowed_origins`
+  * `:allowed_ips` - a list of IPs to allow when `:localhost_only` is enabled (defaults to local IPs)
 
-  * `:localhost_only`
+  * `:allowed_origins` - a list of strings representing origins allowed to access the MCP. Includes only localhost and local IPs by default.
 
-  * `:allowed_ips`
+  * `:localhost_only` - only allow the IPs listed in `:allowed_ips`
+
+  * `:preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 
 You can read more about this options in [FastMCP](https://github.com/yjacquin/fast_mcp) README.
 
@@ -55,24 +57,6 @@ Tidewave is a powerful tool that can help you develop your web application faste
 However, it is important to note that Tidewave is not meant to be used in a production environment.
 
 Tidewave will raise an error if it is used in a production environment.
-
-## ORM Support
-
-Tidewave supports multiple Object-Relational Mapping (ORM) libraries:
-
-- **ActiveRecord** - Full support (Rails default)
-- **Sequel** - Full support
-
-The system defaults to ActiveRecord but can be configured to use Sequel. All database-related tools work seamlessly with both ORMs.
-
-### Configuration
-
-You can specify which ORM to use by setting the `preferred_orm` configuration:
-
-```ruby
-# config/application.rb or config/environments/development.rb
-config.tidewave.preferred_orm = :sequel  # or :active_record (default)
-```
 
 ### Web server requirements
 

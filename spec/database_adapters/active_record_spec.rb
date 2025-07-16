@@ -76,14 +76,4 @@ describe Tidewave::DatabaseAdapters::ActiveRecord do
       expect(result).to eq(::ActiveRecord::Base)
     end
   end
-
-  describe "adapter and database information" do
-    it "includes adapter and database names in execute_query response" do
-      query = "SELECT 1 as test_column"
-      response = adapter.execute_query(query)
-
-      expect(response[:adapter]).to eq("SQLite")
-      expect(response[:database]).to eq(":memory:")
-    end
-  end
 end

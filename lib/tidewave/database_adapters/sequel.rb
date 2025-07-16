@@ -24,23 +24,13 @@ module Tidewave
           columns: columns.map(&:to_s),
           rows: rows.first(RESULT_LIMIT).map(&:values),
           row_count: rows.length,
-          adapter: adapter_name,
-          database: database_name
+          adapter: db.adapter_scheme.to_s.upcase,
+          database: db.opts[:database]
         }
       end
 
       def get_base_class
         ::Sequel::Model
-      end
-
-      private
-
-      def adapter_name
-        ::Sequel::Model.db.adapter_scheme.to_s.upcase
-      end
-
-      def database_name
-        ::Sequel::Model.db.opts[:database]
       end
     end
   end
