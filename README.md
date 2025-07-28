@@ -41,8 +41,6 @@ The following options are available:
 
   * `:allowed_ips` - a list of IPs to allow when `:allow_remote_access` is enabled (defaults to local IPs)
 
-  * `:allowed_origins` - a list of strings representing origins allowed to access the MCP. Includes only localhost and local IPs by default.
-
   * `:allow_remote_access` - only allow the IPs listed in `:allowed_ips`
 
   * `:preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`

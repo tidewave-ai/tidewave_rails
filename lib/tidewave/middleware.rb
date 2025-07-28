@@ -15,14 +15,7 @@ class Tidewave::Middleware
     If you really want to allow remote connections, set `config.tidewave.allow_remote_access = true`.
   TEXT
 
-  INVALID_ORIGIN = <<~TEXT
-    For security reasons, Tidewave does not accept access from any host.
-
-    If this is desired, set `config.tidewave.allowed_origins = ["http://your.host.instead"]`.
-  TEXT
-
   def initialize(app, config)
-    @allowed_origins = config.allowed_origins
     @allow_remote_access = config.allow_remote_access
     @allowed_ips = config.allowed_ips
 
@@ -55,7 +48,6 @@ class Tidewave::Middleware
 
     if request.path.start_with?(PATH_PREFIX + "/")
       return forbidden(INVALID_IP) unless validate_client_ip(request)
-      return forbidden(INVALID_ORIGIN) unless validate_origin(request)
     end
 
     @app.call(env)
@@ -69,18 +61,5 @@ class Tidewave::Middleware
 
   def validate_client_ip(request)
     @allow_remote_access || @allowed_ips.include?(request.ip)
-  end
-
-  def validate_origin(request)
-    origin = request.env["HTTP_ORIGIN"]
-
-    !(origin &&
-        @allowed_origins.none? do |allowed|
-          if allowed.is_a?(Regexp)
-            origin.match?(allowed)
-          else
-            origin == allowed
-          end
-        end)
   end
 end
