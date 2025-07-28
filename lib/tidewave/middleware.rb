@@ -46,7 +46,7 @@ class Tidewave::Middleware
   def call(env)
     request = Rack::Request.new(env)
 
-    if request.path.start_with?(PATH_PREFIX + "/")
+    if request.path.start_with?(PATH_PREFIX)
       return forbidden(INVALID_IP) unless validate_client_ip(request)
     end
 
@@ -56,7 +56,7 @@ class Tidewave::Middleware
   private
 
   def forbidden(message)
-    [ 403, {"Content-Type" => "text/plain"}, [ message ] ]
+    [ 403, { "Content-Type" => "text/plain" }, [ message ] ]
   end
 
   def validate_client_ip(request)
