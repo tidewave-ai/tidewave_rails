@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "fast_mcp"
 require "rack/request"
 require "active_support/core_ext/class"
@@ -31,8 +33,9 @@ class Tidewave::Middleware
       messages_route: MESSAGES_ROUTE,
       sse_route: SSE_ROUTE,
       logger: config.logger || Logger.new(Rails.root.join("log", "tidewave.log")),
-      # Bypass the MCP validation as we set those ourselves
-      allowed_origins: [//],
+      # Rails runs the HostAuthorization in dev, so we skip this
+      allowed_origins: [],
+      # We validate this one in Tidewave::Middleware
       localhost_only: false
     ) do |server|
       server.filter_tools do |request, tools|
@@ -61,7 +64,7 @@ class Tidewave::Middleware
   private
 
   def forbidden(message)
-    [403, {'Content-Type' => 'text/plain'}, [message]]
+    [ 403, {"Content-Type" => "text/plain"}, [ message ] ]
   end
 
   def validate_client_ip(request)
@@ -69,7 +72,7 @@ class Tidewave::Middleware
   end
 
   def validate_origin(request)
-    origin = request.env['HTTP_ORIGIN']
+    origin = request.env["HTTP_ORIGIN"]
 
     !(origin &&
         @allowed_origins.none? do |allowed|
