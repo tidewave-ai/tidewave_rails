@@ -111,9 +111,8 @@ describe Tidewave::Tools::ProjectEval do
         let(:code) { "sleep(1); 42" }
 
         it "times out when evaluation takes too long" do
-          expect { described_class.new.call(code: code, timeout: 100) }.to raise_error(
-            /Evaluation timed out after 100 milliseconds/
-          )
+          result = described_class.new.call(code: code, timeout: 100)
+          expect(result).to include("Timeout::Error: Evaluation timed out after 100 milliseconds")
         end
       end
 
@@ -123,8 +122,7 @@ describe Tidewave::Tools::ProjectEval do
         it "returns formatted error" do
           result = described_class.new.call(code: code)
 
-          expect(result).to include("Error:")
-          expect(result).to include("StandardError: test error")
+          expect(result).to include("test error (StandardError)")
         end
       end
     end
@@ -182,7 +180,7 @@ describe Tidewave::Tools::ProjectEval do
           parsed = JSON.parse(result)
 
           expect(parsed["success"]).to be(false)
-          expect(parsed["result"]).to include("StandardError: test error")
+          expect(parsed["result"]).to include("test error (StandardError)")
           expect(parsed["stdout"]).to eq("")
           expect(parsed["stderr"]).to eq("")
         end
@@ -208,9 +206,11 @@ describe Tidewave::Tools::ProjectEval do
         let(:code) { "sleep(1); 42" }
 
         it "captures timeout error" do
-          expect { described_class.new.call(code: code, timeout: 100, json: true) }.to raise_error(
-            /Evaluation timed out after 100 milliseconds/
-          )
+          result = described_class.new.call(code: code, timeout: 100, json: true)
+          parsed = JSON.parse(result)
+
+          expect(parsed["success"]).to be(false)
+          expect(parsed["result"]).to include("Timeout::Error: Evaluation timed out after 100 milliseconds")
         end
       end
 
@@ -223,7 +223,7 @@ describe Tidewave::Tools::ProjectEval do
 
           expect(parsed["success"]).to be(false)
           expect(parsed["stdout"]).to include("Before error")
-          expect(parsed["result"]).to include("RuntimeError: test error")
+          expect(parsed["result"]).to include("test error (RuntimeError)")
         end
       end
     end
