@@ -31,19 +31,15 @@ In particular, the MCP is located by default at http://localhost:3000/tidewave/m
 
 ## Configuration
 
-You may configure the `tidewave` using the following syntax:
+You may configure `tidewave` using the following syntax:
 
 ```ruby
-  config.tidewave.allowed_ips = [IPAddr.new("192.168.97.1")]
+  config.tidewave.allow_remote_access = true
 ```
 
 The following options are available:
 
-  * `:allowed_ips` - a list of IPs to allow when `:localhost_only` is enabled (defaults to local IPs)
-
-  * `:allowed_origins` - a list of strings representing origins allowed to access the MCP. Includes only localhost and local IPs by default.
-
-  * `:localhost_only` - only allow the IPs listed in `:allowed_ips`
+  * `:allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
 
   * `:preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 

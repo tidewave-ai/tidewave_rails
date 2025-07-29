@@ -2,13 +2,11 @@
 
 module Tidewave
   class Configuration
-    attr_accessor :logger, :allowed_origins, :localhost_only, :allowed_ips, :preferred_orm
+    attr_accessor :logger, :allow_remote_access, :preferred_orm
 
     def initialize
       @logger = nil
-      @allowed_origins = nil
-      @localhost_only = true
-      @allowed_ips = nil
+      @allow_remote_access = true
       @preferred_orm = :active_record
     end
   end

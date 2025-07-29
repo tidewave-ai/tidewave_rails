@@ -11,9 +11,3 @@ module Tidewave
     # Individual adapters are loaded on-demand in database_adapter.rb
   end
 end
-
-module Tidewave
-  PATH_PREFIX = "/tidewave"
-  MESSAGES_ROUTE = "messages"
-  SSE_ROUTE = "mcp"
-end
