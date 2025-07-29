@@ -101,7 +101,7 @@ describe Tidewave::Tools::ProjectEval do
         let(:code) { "arguments.sum" }
 
         it "returns the correct result" do
-          result = described_class.new.call(code: code, arguments: [1, 2, 3])
+          result = described_class.new.call(code: code, arguments: [ 1, 2, 3 ])
 
           expect(result).to eq("6")
         end
@@ -190,11 +190,11 @@ describe Tidewave::Tools::ProjectEval do
         let(:code) { "arguments.map(&:upcase)" }
 
         it "returns structured JSON result with arguments" do
-          result = described_class.new.call(code: code, arguments: ["hello", "world"], json: true)
+          result = described_class.new.call(code: code, arguments: [ "hello", "world" ], json: true)
           parsed = JSON.parse(result)
 
           expect(parsed).to eq({
-            "result" => ["HELLO", "WORLD"],
+            "result" => [ "HELLO", "WORLD" ],
             "success" => true,
             "stdout" => "",
             "stderr" => ""

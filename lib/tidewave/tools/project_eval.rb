@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "timeout"
 require "json"
 
@@ -36,12 +37,12 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
 
       success, result = begin
         Timeout.timeout(timeout_seconds) do
-          [true, eval(code, eval_binding(arguments))]
+          [ true, eval(code, eval_binding(arguments)) ]
         end
       rescue Timeout::Error
-        [false, "Timeout::Error: Evaluation timed out after #{timeout} milliseconds."]
+        [ false, "Timeout::Error: Evaluation timed out after #{timeout} milliseconds." ]
       rescue => e
-        [false, e.full_message]
+        [ false, e.full_message ]
       end
 
       stdout = stdout_capture.string
