@@ -5,7 +5,7 @@ require "rack/test"
 RSpec.describe Tidewave::Middleware do
   include Rack::Test::Methods
 
-  let(:downstream_app) { ->(env) { [200, {}, ["Downstream App"]] } }
+  let(:downstream_app) { ->(env) { [ 200, {}, [ "Downstream App" ] ] } }
   let(:config) { Tidewave::Configuration.new }
   let(:middleware) { described_class.new(downstream_app, config) }
 

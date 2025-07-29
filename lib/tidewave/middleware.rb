@@ -51,7 +51,7 @@ class Tidewave::Middleware
 
       # The MCP routes are handled downstream by FastMCP
       case path
-      when [TIDEWAVE_ROUTE]
+      when [ TIDEWAVE_ROUTE ]
         return home(request)
       end
     end
@@ -95,8 +95,8 @@ class Tidewave::Middleware
     addr = IPAddr.new(ip)
 
     addr.loopback? ||
-    addr == IPAddr.new('127.0.0.1') ||
-    addr == IPAddr.new('::1') ||
-    addr == IPAddr.new('::ffff:127.0.0.1')  # IPv4-mapped IPv6
+    addr == IPAddr.new("127.0.0.1") ||
+    addr == IPAddr.new("::1") ||
+    addr == IPAddr.new("::ffff:127.0.0.1")  # IPv4-mapped IPv6
   end
 end
