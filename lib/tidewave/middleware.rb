@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
+require "open3"
+require "ipaddr"
 require "fast_mcp"
 require "rack/request"
 require "active_support/core_ext/class"
+require "active_support/core_ext/object/blank"
 
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
   SSE_ROUTE = "mcp".freeze
   MESSAGES_ROUTE = "mcp/message".freeze
+  SHELL_ROUTE = "shell".freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -50,9 +54,11 @@ class Tidewave::Middleware
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
 
       # The MCP routes are handled downstream by FastMCP
-      case path
-      when [ TIDEWAVE_ROUTE ]
+      case [ request.request_method, path ]
+      when [ "GET", [ TIDEWAVE_ROUTE ] ]
         return home(request)
+      when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
+        return shell(request)
       end
     end
 
@@ -84,6 +90,49 @@ class Tidewave::Middleware
 
   def forbidden(message)
     [ 403, { "Content-Type" => "text/plain" }, [ message ] ]
+  end
+
+  def shell(request)
+    cmd = request.body.read
+    return [ 400, { "Content-Type" => "text/plain" }, [ "Command body is required" ] ] if cmd.blank?
+
+    response = Rack::Response.new
+    response.status = 200
+    response.headers["Content-Type"] = "text/plain"
+
+    response.finish do |res|
+      begin
+        Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
+          stdin.close
+
+          # Merge stdout and stderr streams
+          ios = [ stdout, stderr ]
+
+          until ios.empty?
+            ready = IO.select(ios, nil, nil, 0.1)
+            next unless ready
+
+            ready[0].each do |io|
+              begin
+                data = io.read_nonblock(4096)
+                res.write(data) if data
+              rescue IO::WaitReadable
+                # No data available right now
+              rescue EOFError
+                # Stream ended
+                ios.delete(io)
+              end
+            end
+          end
+
+          # Wait for process to complete and get exit status
+          exit_status = wait_thr.value.exitstatus
+          res.write("\nTIDEWAVE STATUS: #{exit_status}")
+        end
+      rescue => e
+        res.write("Error executing command: #{e.message}\nTIDEWAVE STATUS: 1")
+      end
+    end
   end
 
   def valid_client_ip?(request)
