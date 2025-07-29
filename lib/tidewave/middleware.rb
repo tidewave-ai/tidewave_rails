@@ -17,7 +17,6 @@ class Tidewave::Middleware
 
   def initialize(app, config)
     @allow_remote_access = config.allow_remote_access
-    @allowed_ips = config.allowed_ips
 
     @app = FastMcp.rack_middleware(app,
       name: "tidewave",
@@ -48,7 +47,7 @@ class Tidewave::Middleware
     path = request.path.split("/").reject(&:empty?)
 
     if path[0] == TIDEWAVE_ROUTE
-      return forbidden(INVALID_IP) unless validate_client_ip(request)
+      return forbidden(INVALID_IP) unless valid_client_ip?(request)
 
       # The MCP routes are handled downstream by FastMCP
       case path
@@ -87,7 +86,17 @@ class Tidewave::Middleware
     [ 403, { "Content-Type" => "text/plain" }, [ message ] ]
   end
 
-  def validate_client_ip(request)
-    @allow_remote_access || @allowed_ips.include?(request.ip)
+  def valid_client_ip?(request)
+    return true if @allow_remote_access
+
+    ip = request.ip
+    return false unless ip
+
+    addr = IPAddr.new(ip)
+
+    addr.loopback? ||
+    addr == IPAddr.new('127.0.0.1') ||
+    addr == IPAddr.new('::1') ||
+    addr == IPAddr.new('::ffff:127.0.0.1')  # IPv4-mapped IPv6
   end
 end
