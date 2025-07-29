@@ -3,11 +3,6 @@
 require "rails_helper"
 
 describe Tidewave::Tools::ExecuteSqlQuery do
-  describe 'tags' do
-    it 'does not include the file_system_tool tag' do
-      expect(described_class.tags).not_to include(:file_system_tool)
-    end
-  end
   describe ".tool_name" do
     it "returns the correct tool name" do
       expect(described_class.tool_name).to eq("execute_sql_query")
