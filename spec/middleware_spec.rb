@@ -29,16 +29,6 @@ RSpec.describe Tidewave::Middleware do
     end
   end
 
-  describe "/tidewave" do
-    it "serves home page" do
-      get "/tidewave"
-      expect(last_response.status).to eq(200)
-      expect(last_response.headers["Content-Type"]).to eq("text/html")
-      expect(last_response.body).to include("Welcome to Tidewave")
-      expect(last_response.body).to include("<title>Tidewave</title>")
-    end
-  end
-
   describe "IP validation" do
     context "when remote access is allowed" do
       before do
@@ -109,6 +99,47 @@ RSpec.describe Tidewave::Middleware do
         post "/tidewave/mcp/message", {}, { "REMOTE_ADDR" => "192.168.1.100" }
         expect(last_response.status).to eq(403)
       end
+    end
+  end
+
+  describe "/tidewave" do
+    it "serves home page" do
+      get "/tidewave"
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["Content-Type"]).to eq("text/html")
+      expect(last_response.body).to include("Welcome to Tidewave")
+      expect(last_response.body).to include("<title>Tidewave</title>")
+    end
+  end
+
+  describe "/tidewave/shell" do
+    it "executes simple command and returns output with status" do
+      post "/tidewave/shell", "echo 'hello world'"
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include("hello world")
+      expect(last_response.body).to include("TIDEWAVE STATUS: 0")
+    end
+
+    it "handles command with non-zero exit status" do
+      # Use a command that should fail on most systems
+      post "/tidewave/shell", "exit 42"
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include("TIDEWAVE STATUS: 42")
+    end
+
+    it "handles multiline commands" do
+      cmd = "echo 'line 1'\necho 'line 2'"
+      post "/tidewave/shell", cmd
+      expect(last_response.status).to eq(200)
+      expect(last_response.body).to include("line 1")
+      expect(last_response.body).to include("line 2")
+      expect(last_response.body).to include("TIDEWAVE STATUS: 0")
+    end
+
+    it "returns 400 for empty command" do
+      post "/tidewave/shell", ""
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include("Command body is required")
     end
   end
 
