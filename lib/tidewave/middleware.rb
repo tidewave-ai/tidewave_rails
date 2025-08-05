@@ -6,6 +6,7 @@ require "fast_mcp"
 require "rack/request"
 require "active_support/core_ext/class"
 require "active_support/core_ext/object/blank"
+require "json"
 
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
@@ -93,8 +94,16 @@ class Tidewave::Middleware
   end
 
   def shell(request)
-    cmd = request.body.read
-    return [ 400, { "Content-Type" => "text/plain" }, [ "Command body is required" ] ] if cmd.blank?
+    body = request.body.read
+    return [ 400, { "Content-Type" => "text/plain" }, [ "Command body is required" ] ] if body.blank?
+
+    begin
+      parsed_body = JSON.parse(body)
+      cmd = parsed_body["command"]
+      return [ 400, { "Content-Type" => "text/plain" }, [ "Command field is required" ] ] if cmd.blank?
+    rescue JSON::ParserError
+      return [ 400, { "Content-Type" => "text/plain" }, [ "Invalid JSON in request body" ] ]
+    end
 
     response = Rack::Response.new
     response.status = 200
@@ -115,7 +124,11 @@ class Tidewave::Middleware
             ready[0].each do |io|
               begin
                 data = io.read_nonblock(4096)
-                res.write(data) if data
+                if data
+                  # Write binary chunk: type (0 for data) + 4-byte length + data
+                  chunk = [ 0, data.bytesize ].pack("CN") + data
+                  res.write(chunk)
+                end
               rescue IO::WaitReadable
                 # No data available right now
               rescue EOFError
@@ -127,10 +140,15 @@ class Tidewave::Middleware
 
           # Wait for process to complete and get exit status
           exit_status = wait_thr.value.exitstatus
-          res.write("\nTIDEWAVE STATUS: #{exit_status}")
+          status_json = JSON.generate({ status: exit_status })
+          # Write binary chunk: type (1 for status) + 4-byte length + JSON data
+          chunk = [ 1, status_json.bytesize ].pack("CN") + status_json
+          res.write(chunk)
         end
       rescue => e
-        res.write("Error executing command: #{e.message}\nTIDEWAVE STATUS: 1")
+        error_json = JSON.generate({ status: 213 })
+        chunk = [ 1, error_json.bytesize ].pack("CN") + error_json
+        res.write(chunk)
       end
     end
   end

@@ -113,33 +113,92 @@ RSpec.describe Tidewave::Middleware do
   end
 
   describe "/tidewave/shell" do
+    def parse_binary_response(body)
+      chunks = []
+      offset = 0
+
+      while offset < body.bytesize
+        type = body.getbyte(offset)
+        length = body[offset + 1, 4].unpack1("N")
+        data = body[offset + 5, length]
+        chunks << { type: type, data: data }
+        offset += 5 + length
+      end
+
+      chunks
+    end
+
     it "executes simple command and returns output with status" do
-      post "/tidewave/shell", "echo 'hello world'"
+      body = { command: "echo 'hello world'" }
+      post "/tidewave/shell", JSON.generate(body)
       expect(last_response.status).to eq(200)
-      expect(last_response.body).to include("hello world")
-      expect(last_response.body).to include("TIDEWAVE STATUS: 0")
+
+      chunks = parse_binary_response(last_response.body)
+      expect(chunks.length).to eq(2)
+
+      # First chunk should be stdout data
+      expect(chunks[0][:type]).to eq(0)
+      expect(chunks[0][:data]).to eq("hello world\n")
+
+      # Second chunk should be status
+      expect(chunks[1][:type]).to eq(1)
+      status_data = JSON.parse(chunks[1][:data])
+      expect(status_data["status"]).to eq(0)
     end
 
     it "handles command with non-zero exit status" do
-      # Use a command that should fail on most systems
-      post "/tidewave/shell", "exit 42"
+      body = { command: "exit 42" }
+      post "/tidewave/shell", JSON.generate(body)
       expect(last_response.status).to eq(200)
-      expect(last_response.body).to include("TIDEWAVE STATUS: 42")
+
+      chunks = parse_binary_response(last_response.body)
+      expect(chunks.length).to eq(1)
+
+      # Should only have status chunk
+      expect(chunks[0][:type]).to eq(1)
+      status_data = JSON.parse(chunks[0][:data])
+      expect(status_data["status"]).to eq(42)
     end
 
     it "handles multiline commands" do
-      cmd = "echo 'line 1'\necho 'line 2'"
-      post "/tidewave/shell", cmd
+      body = {
+        command: "echo 'line 1'\necho 'line 2'"
+      }
+      post "/tidewave/shell", JSON.generate(body)
       expect(last_response.status).to eq(200)
-      expect(last_response.body).to include("line 1")
-      expect(last_response.body).to include("line 2")
-      expect(last_response.body).to include("TIDEWAVE STATUS: 0")
+
+      chunks = parse_binary_response(last_response.body)
+
+      # The shell command outputs both lines together
+      expect(chunks.length).to eq(2)
+
+      # First chunk should be stdout data with both lines
+      expect(chunks[0][:type]).to eq(0)
+      expect(chunks[0][:data]).to eq("line 1\nline 2\n")
+
+      # Second chunk should be status
+      expect(chunks[1][:type]).to eq(1)
+      status_data = JSON.parse(chunks[1][:data])
+      expect(status_data["status"]).to eq(0)
     end
 
-    it "returns 400 for empty command" do
+    it "returns 400 for empty command body" do
       post "/tidewave/shell", ""
       expect(last_response.status).to eq(400)
       expect(last_response.body).to include("Command body is required")
+    end
+
+    it "returns 400 for invalid JSON" do
+      post "/tidewave/shell", "not json"
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include("Invalid JSON in request body")
+    end
+
+    it "returns 400 for missing command field" do
+      body = { other_field: "value" }
+      post "/tidewave/shell", JSON.generate(body)
+      expect(last_response.status).to eq(400)
+      expect(last_response.body).to include("Command field is required")
     end
   end
 
