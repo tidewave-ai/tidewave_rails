@@ -90,6 +90,7 @@ class Tidewave::Middleware
   end
 
   def forbidden(message)
+    Rails.logger.warn(message)
     [ 403, { "Content-Type" => "text/plain" }, [ message ] ]
   end
 
