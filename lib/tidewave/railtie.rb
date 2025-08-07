@@ -13,8 +13,10 @@ module Tidewave
     config.tidewave = Tidewave::Configuration.new()
 
     initializer "tidewave.setup" do |app|
-      # Prevent MCP server from being mounted if Rails is not running in development mode
-      raise "For security reasons, Tidewave is only supported in development mode" unless Rails.env.development?
+      unless app.config.enable_reloading
+        raise "For security reasons, Tidewave is only supported in environments where config.enable_reloading is true (typically development)"
+      end
+
       app.config.middleware.insert_after(
         ActionDispatch::Callbacks,
         Tidewave::Middleware,
