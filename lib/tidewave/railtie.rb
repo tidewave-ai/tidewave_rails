@@ -22,6 +22,16 @@ module Tidewave
         Tidewave::Middleware,
         app.config.tidewave
       )
+
+      app.config.after_initialize do
+          # If the user configured CSP, we need to alter it in dev
+          # to allow TC to run browser_eval.
+          app.config.content_security_policy.try do |content_security_policy|
+            content_security_policy.directives["script-src"].try do |script_src|
+              script_src << "'unsafe-eval'" unless script_src.include?("'unsafe-eval'")
+            end
+          end
+      end
     end
   end
 end

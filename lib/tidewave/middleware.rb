@@ -7,9 +7,11 @@ require "rack/request"
 require "active_support/core_ext/class"
 require "active_support/core_ext/object/blank"
 require "json"
+require "erb"
 
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
+  EMPTY_ROUTE = "empty".freeze
   SSE_ROUTE = "mcp".freeze
   MESSAGES_ROUTE = "mcp/message".freeze
   SHELL_ROUTE = "shell".freeze
@@ -58,6 +60,8 @@ class Tidewave::Middleware
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
         return home(request)
+      when [ "GET", [ TIDEWAVE_ROUTE, EMPTY_ROUTE ] ]
+        return empty(request)
       when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
         return shell(request)
       end
@@ -69,23 +73,33 @@ class Tidewave::Middleware
   private
 
   def home(request)
-    user_agent = request.user_agent
-    host = request.host
+    client_url = Rails.application.config.tidewave.client_url
+
+    project_name = Rails.application.class.module_parent.name
+
+    config = {
+      "project_name" => project_name,
+      "framework_type" => "rails",
+      "tidewave_version" => Tidewave::VERSION
+    }
 
     html = <<~HTML
-      <!DOCTYPE html>
       <html>
-      <head>
-        <title>Tidewave</title>
-      </head>
-      <body>
-        <h1>Welcome to Tidewave</h1>
-        <p>Host: #{host}</p>
-        <p>User Agent: #{user_agent}</p>
-      </body>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <meta name="tidewave:config" content="#{ERB::Util.html_escape(JSON.generate(config))}" />
+          <script type="module" src="#{client_url}/tc/tc.js"></script>
+        </head>
+        <body></body>
       </html>
     HTML
 
+    [ 200, { "Content-Type" => "text/html" }, [ html ] ]
+  end
+
+  def empty(request)
+    html = ""
     [ 200, { "Content-Type" => "text/html" }, [ html ] ]
   end
 
