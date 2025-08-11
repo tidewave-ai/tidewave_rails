@@ -41,7 +41,7 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
         expect(last_response.status).to eq(200)
 
         expect(last_response.body).to include(<<~TEXT.chomp)
-        <pre style="display: none;" data-tidewave-exception-info><code>RuntimeError in TestController#show
+        <textarea style="display: none;" data-tidewave-exception-info>RuntimeError in TestController#show
 
         ## Message
 
@@ -59,7 +59,7 @@ RSpec.describe Tidewave::ExceptionsMiddleware do
 
         ## Session
 
-            {}</code></pre>
+            {}</textarea>
         TEXT
       end
 

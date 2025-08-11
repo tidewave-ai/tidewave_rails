@@ -58,7 +58,7 @@ class Tidewave::ExceptionsMiddleware
           #{request.session.to_hash.inspect}
     TEXT
 
-    %Q|<pre style="display: none;" data-tidewave-exception-info><code>#{ERB::Util.html_escape(text)}</code></pre>|
+    %Q(<textarea style="display: none;" data-tidewave-exception-info>#{ERB::Util.html_escape(text)}</textarea>)
   end
 
   def request_parameters(request)
