@@ -24,6 +24,8 @@ class Tidewave::Middleware
 
   def initialize(app, config)
     @allow_remote_access = config.allow_remote_access
+    @client_url = config.client_url
+    @project_name = Rails.application.class.module_parent.name
 
     @app = FastMcp.rack_middleware(app,
       name: "tidewave",
@@ -73,12 +75,8 @@ class Tidewave::Middleware
   private
 
   def home(request)
-    client_url = Rails.application.config.tidewave.client_url
-
-    project_name = Rails.application.class.module_parent.name
-
     config = {
-      "project_name" => project_name,
+      "project_name" => @project_name,
       "framework_type" => "rails",
       "tidewave_version" => Tidewave::VERSION
     }
@@ -89,7 +87,7 @@ class Tidewave::Middleware
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <meta name="tidewave:config" content="#{ERB::Util.html_escape(JSON.generate(config))}" />
-          <script type="module" src="#{client_url}/tc/tc.js"></script>
+          <script type="module" src="#{@client_url}/tc/tc.js"></script>
         </head>
         <body></body>
       </html>
