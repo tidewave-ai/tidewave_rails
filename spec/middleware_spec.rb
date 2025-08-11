@@ -107,8 +107,7 @@ RSpec.describe Tidewave::Middleware do
       get "/tidewave"
       expect(last_response.status).to eq(200)
       expect(last_response.headers["Content-Type"]).to eq("text/html")
-      expect(last_response.body).to include("Welcome to Tidewave")
-      expect(last_response.body).to include("<title>Tidewave</title>")
+      expect(last_response.body).to include("https://tidewave.ai/tc/tc.js")
     end
   end
 
