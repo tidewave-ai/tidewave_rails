@@ -39,7 +39,7 @@ If you have enabled Content-Security-Policy, Tidewave will automatically enable 
 
 Tidewave is a powerful tool that can help you develop your web application faster and more efficiently. However, it is important to note that Tidewave is not meant to be used in a production environment.
 
-Tidewave will raise an error if it is used in a production environment.
+Tidewave will raise an error if it is used in any environment where code reloading is disabled (which typically includes production).
 
 ### Web server requirements
 

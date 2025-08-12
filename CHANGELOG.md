@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.2.0 (2025-08-12)
+
+* Support Tidewave Web
+* Add Sequel ORM support
+* Return Ruby inspection instead of JSON in tools
+* Add `get_docs`
+* Use a separate log file for Tidewave
+* Remove `package_search` as it was rarely used as its output is limited to avoid injections
+
 ## v0.1.3
 
 * Merge `glob_project_files` tool into `list_project_files`
