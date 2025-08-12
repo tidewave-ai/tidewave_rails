@@ -6,17 +6,6 @@ assistant to your web framework runtime via [MCP](https://modelcontextprotocol.i
 
 [See our website](https://tidewave.ai) for more information.
 
-## Key Features
-
-Tidewave provides tools that allow your LLM of choice to:
-
-- inspect your application logs to help debugging errors
-- execute SQL queries and inspect your database
-- evaluate custom Ruby code in the context of your project
-- find Rubygems packages and source code locations
-
-and more.
-
 ## Installation
 
 You can install Tidewave by adding the `tidewave` gem to the development group in your Gemfile:
@@ -28,6 +17,33 @@ gem "tidewave", group: :development
 Tidewave will now run on the same port as your regular Rails application.
 In particular, the MCP is located by default at http://localhost:3000/tidewave/mcp.
 [You must configure your editor and AI assistants accordingly](https://hexdocs.pm/tidewave/mcp.html).
+
+## Troubleshooting
+
+### Localhost requirement
+
+Tidewave expects your web application to be running on `localhost`. If you are not running on localhost, you may need to set some additional configuration. In particular, you must configure Tidewave to allow `allow_remote_access` and [optionally configure your Rails hosts](https://guides.rubyonrails.org/configuring.html#actiondispatch-hostauthorization). For example, in your `config/environments/development.rb`:
+
+```ruby
+config.hosts << "company.local"
+config.tidewave.allow_remote_access = true
+```
+
+If you want to use Docker for development, you either need to enable the configuration above or automatically redirect the relevant ports, as done by [devcontainers](https://code.visualstudio.com/docs/devcontainers/containers). See our [containars](https://hexdocs.pm/tidewave/containers.html) guide for more information.
+
+### Content security policy
+
+If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly.
+
+### Production Environment
+
+Tidewave is a powerful tool that can help you develop your web application faster and more efficiently. However, it is important to note that Tidewave is not meant to be used in a production environment.
+
+Tidewave will raise an error if it is used in a production environment.
+
+### Web server requirements
+
+Tidewave currently requires a threaded web server like Puma.
 
 ## Configuration
 
@@ -42,21 +58,6 @@ The following options are available:
   * `:allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
 
   * `:preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
-
-You can read more about this options in [FastMCP](https://github.com/yjacquin/fast_mcp) README.
-
-## Considerations
-
-### Production Environment
-
-Tidewave is a powerful tool that can help you develop your web application faster and more efficiently.
-However, it is important to note that Tidewave is not meant to be used in a production environment.
-
-Tidewave will raise an error if it is used in a production environment.
-
-### Web server requirements
-
-Tidewave currently requires a threaded web server like Puma.
 
 ## Acknowledgements
 
