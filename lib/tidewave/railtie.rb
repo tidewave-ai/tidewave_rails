@@ -5,6 +5,7 @@ require "fileutils"
 require "tidewave/configuration"
 require "tidewave/middleware"
 require "tidewave/exceptions_middleware"
+require "tidewave/quiet_requests_middleware"
 
 gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
@@ -44,6 +45,11 @@ module Tidewave
       end
 
       app.middleware.insert_before(ActionDispatch::DebugExceptions, Tidewave::ExceptionsMiddleware)
+    end
+
+    initializer "tidewave.logging" do |app|
+      # Do not pollute user logs with tidewave requests.
+      app.config.middleware.swap(Rails::Rack::Logger, Tidewave::QuietRequestsMiddleware)
     end
   end
 end
