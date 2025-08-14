@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Tidewave::QuietRequestsMiddleware < Rails::Rack::Logger
+class Tidewave::QuietRequestsMiddleware
   def initialize(app)
     @app = app
   end
