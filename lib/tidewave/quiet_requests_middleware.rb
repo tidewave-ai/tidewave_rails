@@ -2,14 +2,14 @@
 
 class Tidewave::QuietRequestsMiddleware < Rails::Rack::Logger
   def initialize(app)
-    super(app)
+    @app = app
   end
 
   def call(env)
     if env["PATH_INFO"].start_with?("/tidewave")
-      Rails.logger.silence { super(env) }
+      Rails.logger.silence { @app.call(env) }
     else
-      super(env)
+      @app.call(env)
     end
   end
 end

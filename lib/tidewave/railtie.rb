@@ -49,7 +49,7 @@ module Tidewave
 
     initializer "tidewave.logging" do |app|
       # Do not pollute user logs with tidewave requests.
-      app.config.middleware.swap(Rails::Rack::Logger, Tidewave::QuietRequestsMiddleware)
+      app.middleware.insert_before(Rails::Rack::Logger, Tidewave::QuietRequestsMiddleware)
     end
   end
 end
