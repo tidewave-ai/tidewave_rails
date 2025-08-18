@@ -1,10 +1,8 @@
 # Tidewave
 
-Tidewave speeds up development with an AI assistant that understands your web application,
-how it runs, and what it delivers. Our current release connects your editor's
-assistant to your web framework runtime via [MCP](https://modelcontextprotocol.io/).
+Tidewave is a coding agent that runs in the browser alongside your web application, deeply integrated with Rails. [See our website](https://tidewave.ai) for more information.
 
-[See our website](https://tidewave.ai) for more information.
+This project can also be used as a standalone Model Context Protocol server for your editors.
 
 ## Installation
 
@@ -14,9 +12,7 @@ You can install Tidewave by adding the `tidewave` gem to the development group i
 gem "tidewave", group: :development
 ```
 
-Tidewave will now run on the same port as your regular Rails application.
-In particular, the MCP is located by default at http://localhost:3000/tidewave/mcp.
-[You must configure your editor and AI assistants accordingly](https://hexdocs.pm/tidewave/mcp.html).
+Now access `/tidewave` route of your web application to enjoy Tidewave Web!
 
 ## Troubleshooting
 
