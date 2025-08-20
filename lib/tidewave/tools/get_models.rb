@@ -3,7 +3,7 @@
 class Tidewave::Tools::GetModels < Tidewave::Tools::Base
   tool_name "get_models"
   description <<~DESCRIPTION
-    Returns a list of all models in the application.
+    Returns a list of all database-backed models in the application.
   DESCRIPTION
 
   def call
