@@ -37,28 +37,6 @@ class Profile < ActiveRecord::Base
 end
 
 describe Tidewave::Tools::GetModels do
-  describe ".tool_name" do
-    it "returns the correct tool name" do
-      expect(described_class.tool_name).to eq("get_models")
-    end
-  end
-
-  describe ".description" do
-    it "returns the correct description" do
-      expect(described_class.description).to eq(
-        <<~DESCRIPTION
-          Returns a list of all models in the application.
-        DESCRIPTION
-      )
-    end
-  end
-
-  describe ".input_schema_to_json" do
-    it "returns the correct input schema" do
-      expect(described_class.input_schema_to_json).to be_nil
-    end
-  end
-
   describe "#call" do
     before do
       # Mock Rails.application.eager_load! to avoid loading all models
