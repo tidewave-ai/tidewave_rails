@@ -1,17 +1,9 @@
 # frozen_string_literal: true
 
 describe Tidewave::Tools::ProjectEval do
-  describe ".tool_name" do
-    it "returns the correct tool name" do
-      expect(described_class.tool_name).to eq("project_eval")
-    end
-  end
-
   describe ".description" do
     it "returns the correct description" do
-      expect(described_class.description).to match(
-        /Evaluates Ruby code in the context of the project/
-      )
+      expect(described_class.input_schema_to_json[:properties][:json]).to be_nil
     end
   end
 

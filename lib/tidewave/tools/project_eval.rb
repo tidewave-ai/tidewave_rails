@@ -20,7 +20,7 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
     required(:code).filled(:string).description("The Ruby code to evaluate")
     optional(:arguments).value(:array).description("The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.")
     optional(:timeout).filled(:integer).description("The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).")
-    optional(:json).filled(:bool).description("Whether to return the result as JSON with structured output containing result, success, stdout, and stderr fields. Defaults to false.")
+    optional(:json).hidden().filled(:bool).description("Whether to return the result as JSON with structured output containing result, success, stdout, and stderr fields. Defaults to false.")
   end
 
   def call(code:, arguments: [], timeout: 30_000, json: false)
