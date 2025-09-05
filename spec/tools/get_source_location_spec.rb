@@ -7,18 +7,6 @@ describe Tidewave::Tools::GetSourceLocation do
     end
   end
 
-  describe ".description" do
-    let(:description) do
-      <<~DESCRIPTION
-        Returns the source location for the given reference.
-      DESCRIPTION
-    end
-
-    it "returns the correct description" do
-      expect(described_class.description).to match(description)
-    end
-  end
-
   describe "#input_schema_to_json" do
     let(:expected_input_schema) do
       {
@@ -146,6 +134,28 @@ describe Tidewave::Tools::GetSourceLocation do
         # When the path cannot be made relative, it returns the absolute path
         # In this case, Gem is defined in ruby core, so it shows as "ruby:0"
         expect(subject).to match(/^(\.\.\/|ruby:|\/)/)
+      end
+    end
+
+    context "when requesting a package location with dep:" do
+      let(:reference) { 'dep:fast-mcp' }
+
+      it "returns the package location" do
+        result = subject
+        expect(result).to include("fast-mcp")
+        expect(result).to match(%r{/.*gems/fast-mcp-[\d.]+})
+        expect(File.directory?(result)).to be true
+      end
+    end
+
+    context "when requesting a non-existent package location with dep:" do
+      let(:reference) { 'dep:non_existent_package_xyz' }
+
+      it "raises an error" do
+        expect { subject }.to raise_error(
+          RuntimeError,
+          "Package non_existent_package_xyz not found. Check your Gemfile for available packages."
+        )
       end
     end
   end
