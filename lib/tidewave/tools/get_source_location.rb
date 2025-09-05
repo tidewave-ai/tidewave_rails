@@ -10,10 +10,11 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
     such as `String`, an instance method, such as `String#gsub`, or class
     method, such as `File.executable?`
 
-    This works for methods in the current project, as well as dependencies.
-
-    This tool only works if you know the specific constant/method being targeted.
+    This tool only works if you know the specific constant/method being targeted,
+    and it works across the current project and all dependencies.
     If that is the case, prefer this tool over grepping the file system.
+
+    You may also get the root location of a gem, you can use "dep:PACKAGE_NAME".
   DESCRIPTION
 
   arguments do
@@ -21,6 +22,12 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
   end
 
   def call(reference:)
+    # Check if this is a package location request
+    if reference.start_with?("dep:")
+      package_name = reference.gsub("dep:", "")
+      return get_package_location(package_name)
+    end
+
     file_path, line_number = self.class.get_source_location(reference)
 
     if file_path
@@ -33,6 +40,18 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
       end
     else
       raise NameError, "could not find source location for #{reference}"
+    end
+  end
+
+  def get_package_location(package)
+    raise "dep: prefix only works with projects using Bundler" unless defined?(Bundler)
+    specs = Bundler.load.specs
+
+    spec = specs.find { |s| s.name == package }
+    if spec
+      spec.full_gem_path
+    else
+      raise "Package #{package} not found. Check your Gemfile for available packages."
     end
   end
 
