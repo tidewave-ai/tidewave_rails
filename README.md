@@ -57,7 +57,7 @@ The following config is available:
 
   * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 
-  * `team` - set your team configuration, such as `config.tidewave.team = { id: "my-company }`
+  * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
 
 ## Acknowledgements
 
