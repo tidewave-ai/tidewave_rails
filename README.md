@@ -51,11 +51,13 @@ You may configure `tidewave` using the following syntax:
   config.tidewave.allow_remote_access = true
 ```
 
-The following options are available:
+The following config is available:
 
-  * `:allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
+  * `allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
 
-  * `:preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
+  * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
+
+  * `team` - set your team configuration, such as `config.tidewave.team = {id: "my-company}`
 
 ## Acknowledgements
 

@@ -25,6 +25,7 @@ class Tidewave::Middleware
   def initialize(app, config)
     @allow_remote_access = config.allow_remote_access
     @client_url = config.client_url
+    @team = config.team
     @project_name = Rails.application.class.module_parent.name
 
     @app = FastMcp.rack_middleware(app,
@@ -78,7 +79,8 @@ class Tidewave::Middleware
     config = {
       "project_name" => @project_name,
       "framework_type" => "rails",
-      "tidewave_version" => Tidewave::VERSION
+      "tidewave_version" => Tidewave::VERSION,
+      "team" => @team
     }
 
     html = <<~HTML
