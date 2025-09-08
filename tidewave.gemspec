@@ -5,7 +5,7 @@ require_relative "lib/tidewave/version"
 Gem::Specification.new do |spec|
   spec.name        = "tidewave"
   spec.version     = Tidewave::VERSION
-  spec.authors     = [ "Yorick Jacquin" ]
+  spec.authors     = [ "Yorick Jacquin", "José Valim" ]
   spec.email       = [ "support@tidewave.ai" ]
   spec.homepage    = "https://tidewave.ai/"
   spec.summary     = "Tidewave for Rails"

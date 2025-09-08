@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## v0.3.0 (2025-09-08)
+
+* Add `grep` option to `get_logs`
+* Bundle `get_package_location` into `get_source_location`
+* Support team configuration
+* Remove deprecated file system tools
+
 ## v0.2.0 (2025-08-12)
 
 * Support Tidewave Web
