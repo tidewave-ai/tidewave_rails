@@ -11,7 +11,6 @@ require "erb"
 
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
-  EMPTY_ROUTE = "empty".freeze
   SSE_ROUTE = "mcp".freeze
   MESSAGES_ROUTE = "mcp/message".freeze
   SHELL_ROUTE = "shell".freeze
@@ -63,8 +62,6 @@ class Tidewave::Middleware
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
         return home(request)
-      when [ "GET", [ TIDEWAVE_ROUTE, EMPTY_ROUTE ] ]
-        return empty(request)
       when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
         return shell(request)
       end
@@ -95,11 +92,6 @@ class Tidewave::Middleware
       </html>
     HTML
 
-    [ 200, { "Content-Type" => "text/html" }, [ html ] ]
-  end
-
-  def empty(request)
-    html = ""
     [ 200, { "Content-Type" => "text/html" }, [ html ] ]
   end
 
