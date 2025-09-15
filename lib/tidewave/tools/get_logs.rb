@@ -38,13 +38,13 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
       file_size = file.pos
       return if file_size == 0
 
-      buffer_size = [4096, file_size].min
+      buffer_size = [ 4096, file_size ].min
       pos = file_size
       buffer = ""
 
       while pos > 0 && buffer.count("\n") < 10000 # Safety limit
         # Move back by buffer_size or to beginning of file
-        seek_pos = [pos - buffer_size, 0].max
+        seek_pos = [ pos - buffer_size, 0 ].max
         file.seek(seek_pos)
 
         # Read chunk
