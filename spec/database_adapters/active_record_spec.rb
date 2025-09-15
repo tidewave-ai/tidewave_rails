@@ -69,11 +69,4 @@ describe Tidewave::DatabaseAdapters::ActiveRecord do
     end
   end
 
-  describe "#get_base_class" do
-    it "returns the ActiveRecord::Base class" do
-      result = adapter.get_base_class
-
-      expect(result).to eq(::ActiveRecord::Base)
-    end
-  end
 end

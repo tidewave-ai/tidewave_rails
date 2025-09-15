@@ -29,13 +29,9 @@ module Tidewave
         }
       end
 
-      def get_base_class
-        ::Sequel::Model
-      end
-
       def get_models
         # Filter out anonymous Sequel models that can't be resolved as constants
-        get_base_class.descendants.reject { |model| model.name&.start_with?("Sequel::_Model(") }
+        ::Sequel::Model.descendants.reject { |model| model.name&.start_with?("Sequel::_Model(") }
       end
     end
   end

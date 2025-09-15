@@ -25,12 +25,8 @@ module Tidewave
         }
       end
 
-      def get_base_class
-        ::ActiveRecord::Base
-      end
-
       def get_models
-        get_base_class.descendants
+        ::ActiveRecord::Base.descendants
       end
 
       private

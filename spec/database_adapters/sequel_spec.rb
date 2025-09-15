@@ -130,14 +130,6 @@ describe Tidewave::DatabaseAdapters::Sequel do
     end
   end
 
-  describe "#get_base_class" do
-    it "returns the Sequel::Model base class" do
-      result = adapter.get_base_class
-
-      expect(result).to eq(::Sequel::Model)
-    end
-  end
-
   describe "#get_models" do
     it "filters out anonymous Sequel models" do
       # Mock Sequel models including anonymous ones
