@@ -29,6 +29,10 @@ module Tidewave
         ::ActiveRecord::Base
       end
 
+      def get_models
+        get_base_class.descendants
+      end
+
       private
 
       def database_name

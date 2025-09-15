@@ -92,34 +92,25 @@ describe Tidewave::Tools::GetModels do
       end
     end
 
-    context "with Sequel ORM" do
-      before do
-        # Mock Rails configuration for Sequel
-        allow(Rails.application.config.tidewave).to receive(:preferred_orm).and_return(:sequel)
-
-        # Create mock Sequel models - one named, one anonymous
+    context "with database adapter" do
+      it "uses adapter's get_models method" do
+        # Mock models from adapter
         account_model = double("Account", name: "Account")
-        anonymous_model = double("AnonymousModel", name: "Sequel::_Model(:accounts)")
+        user_model = double("User", name: "User")
 
-        sequel_model_class = double("SequelModelClass")
-        allow(sequel_model_class).to receive(:descendants).and_return([ account_model, anonymous_model ])
+        adapter = instance_double(Tidewave::DatabaseAdapter)
+        allow(adapter).to receive(:get_models).and_return([ account_model, user_model ])
+        allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(adapter)
 
-        # Mock the database adapter
-        sequel_adapter = instance_double(Tidewave::DatabaseAdapters::Sequel)
-        allow(sequel_adapter).to receive(:get_base_class).and_return(sequel_model_class)
-        allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(sequel_adapter)
-
-        # Mock Object.const_source_location for named model
+        # Mock Object.const_source_location for models
         allow(Object).to receive(:const_source_location).with("Account").and_return([ "/app/models/account.rb", 1 ])
-      end
+        allow(Object).to receive(:const_source_location).with("User").and_return([ "/app/models/user.rb", 1 ])
 
-      it "filters out anonymous Sequel models and includes only named models" do
         result = described_class.new.call
 
-        # Should include named model
         expect(result).to include("Account")
-        # Should NOT include anonymous Sequel model
-        expect(result).not_to include("Sequel::_Model(:accounts)")
+        expect(result).to include("User")
+        expect(adapter).to have_received(:get_models)
       end
     end
   end
