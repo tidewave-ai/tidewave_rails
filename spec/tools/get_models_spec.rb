@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "tidewave/database_adapters/sequel"
 
 # Define test models for this spec
 class User < ActiveRecord::Base
@@ -88,6 +89,28 @@ describe Tidewave::Tools::GetModels do
       expect(lines.length).to be >= 3
       lines.each do |line|
         expect(line).to start_with("* ")
+      end
+    end
+
+    context "with database adapter" do
+      it "uses adapter's get_models method" do
+        # Mock models from adapter
+        account_model = double("Account", name: "Account")
+        user_model = double("User", name: "User")
+
+        adapter = instance_double(Tidewave::DatabaseAdapter)
+        allow(adapter).to receive(:get_models).and_return([ account_model, user_model ])
+        allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(adapter)
+
+        # Mock Object.const_source_location for models
+        allow(Object).to receive(:const_source_location).with("Account").and_return([ "/app/models/account.rb", 1 ])
+        allow(Object).to receive(:const_source_location).with("User").and_return([ "/app/models/user.rb", 1 ])
+
+        result = described_class.new.call
+
+        expect(result).to include("Account")
+        expect(result).to include("User")
+        expect(adapter).to have_received(:get_models)
       end
     end
   end

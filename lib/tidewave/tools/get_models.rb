@@ -10,8 +10,10 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     # Ensure all models are loaded
     Rails.application.eager_load!
 
-    base_class = Tidewave::DatabaseAdapter.current.get_base_class
-    base_class.descendants.map do |model|
+    # Use adapter to get models (encapsulates ORM-specific logic)
+    models = Tidewave::DatabaseAdapter.current.get_models
+
+    models.map do |model|
       if location = get_relative_source_location(model.name)
         "* #{model.name} at #{location}"
       else
