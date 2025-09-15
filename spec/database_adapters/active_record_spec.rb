@@ -68,5 +68,4 @@ describe Tidewave::DatabaseAdapters::ActiveRecord do
       end
     end
   end
-
 end
