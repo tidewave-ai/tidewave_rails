@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "tidewave/database_adapters/sequel"
 
 # Define test models for this spec
 class User < ActiveRecord::Base
@@ -88,6 +89,37 @@ describe Tidewave::Tools::GetModels do
       expect(lines.length).to be >= 3
       lines.each do |line|
         expect(line).to start_with("* ")
+      end
+    end
+
+    context "with Sequel ORM" do
+      before do
+        # Mock Rails configuration for Sequel
+        allow(Rails.application.config.tidewave).to receive(:preferred_orm).and_return(:sequel)
+
+        # Create mock Sequel models - one named, one anonymous
+        account_model = double("Account", name: "Account")
+        anonymous_model = double("AnonymousModel", name: "Sequel::_Model(:accounts)")
+
+        sequel_model_class = double("SequelModelClass")
+        allow(sequel_model_class).to receive(:descendants).and_return([ account_model, anonymous_model ])
+
+        # Mock the database adapter
+        sequel_adapter = instance_double(Tidewave::DatabaseAdapters::Sequel)
+        allow(sequel_adapter).to receive(:get_base_class).and_return(sequel_model_class)
+        allow(Tidewave::DatabaseAdapter).to receive(:current).and_return(sequel_adapter)
+
+        # Mock Object.const_source_location for named model
+        allow(Object).to receive(:const_source_location).with("Account").and_return([ "/app/models/account.rb", 1 ])
+      end
+
+      it "filters out anonymous Sequel models and includes only named models" do
+        result = described_class.new.call
+
+        # Should include named model
+        expect(result).to include("Account")
+        # Should NOT include anonymous Sequel model
+        expect(result).not_to include("Sequel::_Model(:accounts)")
       end
     end
   end

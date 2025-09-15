@@ -10,8 +10,7 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
     # Ensure all models are loaded
     Rails.application.eager_load!
 
-    base_class = Tidewave::DatabaseAdapter.current.get_base_class
-    base_class.descendants.map do |model|
+    model_names.map do |model|
       if location = get_relative_source_location(model.name)
         "* #{model.name} at #{location}"
       else
@@ -21,6 +20,14 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
   end
 
   private
+
+  def model_names
+    base_class = Tidewave::DatabaseAdapter.current.get_base_class
+
+    return base_class.descendants if Rails.application.config.tidewave.preferred_orm != :sequel
+
+    base_class.descendants.reject { |model| model.name.start_with?("Sequel::_Model(") }
+  end
 
   def get_relative_source_location(model_name)
     source_location = Object.const_source_location(model_name)
