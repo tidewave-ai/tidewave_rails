@@ -17,13 +17,14 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
     log_file = Rails.root.join("log", "#{Rails.env}.log")
     return "Log file not found" unless File.exist?(log_file)
 
-    logs = File.readlines(log_file)
+    regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
+    matching_lines = []
 
-    if grep
-      regex = Regexp.new(grep, Regexp::IGNORECASE)
-      logs = logs.select { |line| line.match?(regex) }
+    File.foreach(log_file) do |line|
+      matching_lines << line if regex.nil? or line.match?(regex)
+      matching_lines.shift if matching_lines.size > tail
     end
 
-    logs.last(tail).join
+    matching_lines.last(tail).join
   end
 end
