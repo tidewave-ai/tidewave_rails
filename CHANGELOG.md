@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.3.1 (2025-09-16)
+
+* Optimize `get_logs`
+* Fix `get_models` tool to filter Sequel anonymous models
+* Remove unused credentials support
+
 ## v0.3.0 (2025-09-08)
 
 * Add `grep` option to `get_logs`
