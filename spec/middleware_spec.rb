@@ -29,6 +29,31 @@ RSpec.describe Tidewave::Middleware do
     end
   end
 
+  describe "header removal" do
+    let(:downstream_app_with_headers) do
+      ->(env) { [ 200, { "Content-Security-Policy" => "default-src 'self'", "X-Frame-Options" => "DENY" }, [ "App with headers" ] ] }
+    end
+    let(:middleware_with_headers) { described_class.new(downstream_app_with_headers, config) }
+
+    def app
+      middleware_with_headers
+    end
+
+    it "removes CSP and X-Frame-Options headers from all responses" do
+      get "/some-route"
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["Content-Security-Policy"]).to be_nil
+      expect(last_response.headers["X-Frame-Options"]).to be_nil
+      expect(last_response.body).to eq("App with headers")
+    end
+
+    it "removes headers from tidewave routes as well" do
+      get "/tidewave/some-sub-route"
+      expect(last_response.headers["Content-Security-Policy"]).to be_nil
+      expect(last_response.headers["X-Frame-Options"]).to be_nil
+    end
+  end
+
   describe "IP validation" do
     context "when remote access is allowed" do
       before do
@@ -110,6 +135,21 @@ RSpec.describe Tidewave::Middleware do
       expect(last_response.headers["Content-Type"]).to eq("text/html")
       expect(last_response.body).to include("https://tidewave.ai/tc/tc.js")
       expect(last_response.body).to include("team&quot;:{&quot;id&quot;:&quot;dashbit&quot;}")
+    end
+  end
+
+  describe "/tidewave/config" do
+    it "returns JSON configuration" do
+      config.team = { id: "dashbit" }
+      get "/tidewave/config"
+      expect(last_response.status).to eq(200)
+      expect(last_response.headers["Content-Type"]).to eq("application/json")
+
+      parsed_config = JSON.parse(last_response.body)
+      expect(parsed_config["framework_type"]).to eq("rails")
+      expect(parsed_config["tidewave_version"]).to eq(Tidewave::VERSION)
+      expect(parsed_config["team"]).to eq({ "id" => "dashbit" })
+      expect(parsed_config).to have_key("project_name")
     end
   end
 

@@ -14,6 +14,7 @@ class Tidewave::Middleware
   SSE_ROUTE = "mcp".freeze
   MESSAGES_ROUTE = "mcp/message".freeze
   SHELL_ROUTE = "shell".freeze
+  CONFIG_ROUTE = "config".freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -62,23 +63,27 @@ class Tidewave::Middleware
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
         return home(request)
+      when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
+        return config_endpoint(request)
       when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
         return shell(request)
       end
     end
 
-    @app.call(env)
+    status, headers, body = @app.call(env)
+
+    # Remove CSP and X-Frame-Options headers for non-Tidewave routes
+    # to allow embedding the app in Tidewave
+    headers.delete("Content-Security-Policy")
+    headers.delete("X-Frame-Options")
+
+    [ status, headers, body ]
   end
 
   private
 
   def home(request)
-    config = {
-      "project_name" => @project_name,
-      "framework_type" => "rails",
-      "tidewave_version" => Tidewave::VERSION,
-      "team" => @team
-    }
+    config = config_data
 
     html = <<~HTML
       <html>
@@ -93,6 +98,19 @@ class Tidewave::Middleware
     HTML
 
     [ 200, { "Content-Type" => "text/html" }, [ html ] ]
+  end
+
+  def config_endpoint(request)
+    [ 200, { "Content-Type" => "application/json" }, [ JSON.generate(config_data) ] ]
+  end
+
+  def config_data
+    {
+      "project_name" => @project_name,
+      "framework_type" => "rails",
+      "tidewave_version" => Tidewave::VERSION,
+      "team" => @team
+    }
   end
 
   def forbidden(message)
