@@ -33,10 +33,9 @@ RSpec.describe Tidewave::Middleware do
     let(:downstream_app_with_headers) do
       ->(env) { [ 200, { "X-Frame-Options" => "DENY" }, [ "App with headers" ] ] }
     end
-    let(:middleware_with_headers) { described_class.new(downstream_app_with_headers, config) }
 
     def app
-      middleware_with_headers
+      described_class.new(downstream_app_with_headers, config)
     end
 
     it "removes CSP and X-Frame-Options headers from all responses" do
