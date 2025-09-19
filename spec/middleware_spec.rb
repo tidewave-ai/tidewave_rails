@@ -31,7 +31,7 @@ RSpec.describe Tidewave::Middleware do
 
   describe "header removal" do
     let(:downstream_app_with_headers) do
-      ->(env) { [ 200, { "Content-Security-Policy" => "default-src 'self'", "X-Frame-Options" => "DENY" }, [ "App with headers" ] ] }
+      ->(env) { [ 200, { "X-Frame-Options" => "DENY" }, [ "App with headers" ] ] }
     end
     let(:middleware_with_headers) { described_class.new(downstream_app_with_headers, config) }
 
@@ -42,14 +42,12 @@ RSpec.describe Tidewave::Middleware do
     it "removes CSP and X-Frame-Options headers from all responses" do
       get "/some-route"
       expect(last_response.status).to eq(200)
-      expect(last_response.headers["Content-Security-Policy"]).to be_nil
       expect(last_response.headers["X-Frame-Options"]).to be_nil
       expect(last_response.body).to eq("App with headers")
     end
 
     it "removes headers from tidewave routes as well" do
       get "/tidewave/some-sub-route"
-      expect(last_response.headers["Content-Security-Policy"]).to be_nil
       expect(last_response.headers["X-Frame-Options"]).to be_nil
     end
   end

@@ -32,6 +32,8 @@ module Tidewave
           content_security_policy.directives["script-src"].try do |script_src|
             script_src << "'unsafe-eval'" unless script_src.include?("'unsafe-eval'")
           end
+
+          content_security_policy.directives.delete("frame-ancestors")
         end
       end
     end

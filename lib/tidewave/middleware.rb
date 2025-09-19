@@ -74,7 +74,6 @@ class Tidewave::Middleware
 
     # Remove CSP and X-Frame-Options headers for non-Tidewave routes
     # to allow embedding the app in Tidewave
-    headers.delete("Content-Security-Policy")
     headers.delete("X-Frame-Options")
 
     [ status, headers, body ]
