@@ -38,7 +38,7 @@ RSpec.describe Tidewave::Middleware do
       described_class.new(downstream_app_with_headers, config)
     end
 
-    it "removes CSP and X-Frame-Options headers from all responses" do
+    it "removes X-Frame-Options headers from all responses" do
       get "/some-route"
       expect(last_response.status).to eq(200)
       expect(last_response.headers["X-Frame-Options"]).to be_nil
