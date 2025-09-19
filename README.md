@@ -29,7 +29,7 @@ If you want to use Docker for development, you either need to enable the configu
 
 ### Content security policy
 
-If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly.
+If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly. It also disables the `frame-ancestors` directive.
 
 ### Web server requirements
 
