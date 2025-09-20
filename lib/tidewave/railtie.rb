@@ -41,7 +41,6 @@ module Tidewave
     initializer "tidewave.intercept_exceptions" do |app|
       # We intercept exceptions from DebugExceptions, format the
       # information as text and inject into the exception page html.
-
       ActionDispatch::DebugExceptions.register_interceptor do |request, exception|
         request.set_header("tidewave.exception", exception)
       end
@@ -51,7 +50,8 @@ module Tidewave
 
     initializer "tidewave.logging" do |app|
       # Do not pollute user logs with tidewave requests.
-      app.middleware.insert_before(Rails::Rack::Logger, Tidewave::QuietRequestsMiddleware)
+      logger_middleware = app.config.tidewave.logger_middleware || Rails::Rack::Logger
+      app.middleware.insert_before(logger_middleware, Tidewave::QuietRequestsMiddleware)
     end
   end
 end

@@ -55,6 +55,8 @@ The following config is available:
 
   * `allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
 
+  * `logger_middleware` - The logger middleware Tidewave should wrap to silence its own logs
+
   * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`

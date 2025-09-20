@@ -2,7 +2,7 @@
 
 module Tidewave
   class Configuration
-    attr_accessor :logger, :allow_remote_access, :preferred_orm, :dev, :client_url, :team
+    attr_accessor :logger, :allow_remote_access, :preferred_orm, :dev, :client_url, :team, :logger_middleware
 
     def initialize
       @logger = nil
@@ -11,6 +11,7 @@ module Tidewave
       @dev = false
       @client_url = "https://tidewave.ai"
       @team = {}
+      @logger_middleware = nil
     end
   end
 end
