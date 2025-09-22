@@ -72,8 +72,8 @@ class Tidewave::Middleware
 
     status, headers, body = @app.call(env)
 
-    # Remove CSP and X-Frame-Options headers for non-Tidewave routes
-    # to allow embedding the app in Tidewave
+    # Remove X-Frame-Options headers for non-Tidewave routes to allow embedding.
+    # CSP headers are configured in the CSP application environment.
     headers.delete("X-Frame-Options")
 
     [ status, headers, body ]
