@@ -13,7 +13,8 @@ describe Tidewave::Tools::GetSourceLocation do
         properties: {
           reference: {
             type: "string",
-            description: "The constant/method to lookup, such String, String#gsub or File.executable?"
+            description: "The constant/method to lookup, such String, String#gsub or File.executable?",
+            minLength: 1
           }
         },
         required: [ "reference" ],
