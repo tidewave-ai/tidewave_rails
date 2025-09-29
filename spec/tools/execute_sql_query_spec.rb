@@ -36,11 +36,14 @@ describe Tidewave::Tools::ExecuteSqlQuery do
         properties: {
           query: {
             type: "string",
-            description: "The SQL query to execute. For PostgreSQL, use $1, $2 placeholders. For MySQL, use ? placeholders."
+            description: "The SQL query to execute. For PostgreSQL, use $1, $2 placeholders. For MySQL, use ? placeholders.",
+            minLength: 1
           },
           arguments: {
             type: "array",
-            items: {},
+            items: {
+              type: [ "string", "boolean", "number", "null", "object", "array" ]
+            },
             description: "The arguments to pass to the query. The query must contain corresponding parameter placeholders."
           }
         },
