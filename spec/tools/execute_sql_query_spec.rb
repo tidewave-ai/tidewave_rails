@@ -41,6 +41,9 @@ describe Tidewave::Tools::ExecuteSqlQuery do
           },
           arguments: {
             type: "array",
+            items: {
+              type: [ "string", "boolean", "number", "null", "object" ]
+            },
             description: "The arguments to pass to the query. The query must contain corresponding parameter placeholders."
           }
         },

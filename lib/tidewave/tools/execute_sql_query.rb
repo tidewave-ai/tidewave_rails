@@ -19,7 +19,7 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
 
   arguments do
     required(:query).filled(:string).description("The SQL query to execute. For PostgreSQL, use $1, $2 placeholders. For MySQL, use ? placeholders.")
-    optional(:arguments).value(:array).description("The arguments to pass to the query. The query must contain corresponding parameter placeholders.")
+    optional(:arguments).array(:str?, :bool?, :float?, :nil?, :hash?).description("The arguments to pass to the query. The query must contain corresponding parameter placeholders.")
   end
 
   RESULT_LIMIT = 50
