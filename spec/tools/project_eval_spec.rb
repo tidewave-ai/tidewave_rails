@@ -7,6 +7,35 @@ describe Tidewave::Tools::ProjectEval do
     end
   end
 
+
+  describe ".input_schema_to_json" do
+    let(:expected_input_schema) do
+      {
+        properties: {
+          arguments: {
+            description: "The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.",
+            items: {},
+            type: "array"
+          },
+          code: {
+            description: "The Ruby code to evaluate",
+            type: "string"
+          },
+          timeout: {
+            description: "The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).",
+            type: "number"
+          }
+        },
+        required: [ "code" ],
+        type: "object"
+      }
+    end
+
+    it "returns the correct input schema" do
+      expect(described_class.input_schema_to_json).to eq(expected_input_schema)
+    end
+  end
+
   describe "#call" do
     let(:code) { nil }
 
