@@ -14,16 +14,22 @@ describe Tidewave::Tools::ProjectEval do
         properties: {
           arguments: {
             description: "The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.",
-            items: {},
+            items: {
+              type: [ "string", "boolean", "number", "null", "object", "array" ]
+            },
             type: "array"
           },
           code: {
             description: "The Ruby code to evaluate",
-            type: "string"
+            type: "string",
+            minLength: 1
           },
           timeout: {
             description: "The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).",
-            type: "number"
+            type: "integer",
+            not: {
+              type: "null"
+            }
           }
         },
         required: [ "code" ],
