@@ -2,27 +2,21 @@
 
 require "json"
 require "rack"
+require "fast_mcp"
 
 module Tidewave
   # Streamable HTTP transport for MCP (POST-only, no SSE)
-  #
   # This transport implements a simplified version of the MCP Streamable HTTP protocol
   # that only supports POST requests for JSON-RPC messages. Unlike the full protocol,
   # it does not support Server-Sent Events (SSE) for streaming responses.
-  #
-  # This matches the implementation in tidewave_phoenix which also only supports POST.
-  class StreamableHttpTransport
+  class StreamableHttpTransport < FastMcp::Transports::BaseTransport
     attr_reader :app, :path
 
     def initialize(app, server, options = {})
+      super(server, logger: options[:logger])
       @app = app
-      @server = server
       @path = options[:path_prefix] || "/mcp"
-      @logger = options[:logger] || Logger.new($stdout)
       @running = false
-
-      # Set this transport on the server so it can send messages back
-      @server.transport = self
     end
 
     # Start the transport
@@ -40,8 +34,6 @@ module Tidewave
     # Send a message (no-op for non-streaming transport)
     # Required by FastMCP::Transports::BaseTransport interface
     def send_message(message)
-      # This transport doesn't support server-initiated messages (no SSE)
-      # Messages are only sent as HTTP responses to POST requests
       @logger.debug("send_message called but ignored (no streaming support)")
     end
 
@@ -49,11 +41,10 @@ module Tidewave
     def call(env)
       request = Rack::Request.new(env)
 
-      # Check if this is an MCP request
       if request.path == @path
+        @server.transport = self
         handle_mcp_request(request, env)
       else
-        # Pass through to the next middleware/app
         @app.call(env)
       end
     end
@@ -64,10 +55,8 @@ module Tidewave
       if request.post?
         handle_post_request(request)
       elsif request.get?
-        # Return 405 Method Not Allowed for GET requests (no SSE support)
         method_not_allowed_response
       else
-        # Return 405 for any other HTTP method
         method_not_allowed_response
       end
     end
@@ -76,23 +65,19 @@ module Tidewave
       @logger.debug("Received POST request to MCP endpoint")
 
       begin
-        # Read and parse the request body
         body = request.body.read
         message = JSON.parse(body)
 
         @logger.debug("Processing message: #{message.inspect}")
 
-        # Validate JSON-RPC 2.0 format
         unless valid_jsonrpc_message?(message)
           return json_rpc_error_response(400, -32600, "Invalid Request", nil)
         end
 
-        # Process the message through FastMCP's server
-        response = @server.process_message(message)
+        response = process_message(message)
 
         @logger.debug("Sending response: #{response.inspect}")
 
-        # Return the response as JSON
         [
           200,
           { "Content-Type" => "application/json" },
@@ -112,7 +97,6 @@ module Tidewave
       return false unless message.is_a?(Hash)
       return false unless message["jsonrpc"] == "2.0"
 
-      # Must have either a method (request/notification) or result/error (response)
       message.key?("method") || message.key?("result") || message.key?("error")
     end
 
