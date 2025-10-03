@@ -8,11 +8,11 @@ require "active_support/core_ext/class"
 require "active_support/core_ext/object/blank"
 require "json"
 require "erb"
+require_relative "streamable_http_transport"
 
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
-  SSE_ROUTE = "mcp".freeze
-  MESSAGES_ROUTE = "mcp/message".freeze
+  MCP_ROUTE = "mcp".freeze
   SHELL_ROUTE = "shell".freeze
   CONFIG_ROUTE = "config".freeze
 
@@ -31,9 +31,8 @@ class Tidewave::Middleware
     @app = FastMcp.rack_middleware(app,
       name: "tidewave",
       version: Tidewave::VERSION,
-      path_prefix: "/" + TIDEWAVE_ROUTE,
-      messages_route: MESSAGES_ROUTE,
-      sse_route: SSE_ROUTE,
+      path_prefix: "/" + TIDEWAVE_ROUTE + "/" + MCP_ROUTE,
+      transport: Tidewave::StreamableHttpTransport,
       logger: config.logger || Logger.new(Rails.root.join("log", "tidewave.log")),
       # Rails runs the HostAuthorization in dev, so we skip this
       allowed_origins: [],

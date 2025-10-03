@@ -88,22 +88,38 @@ RSpec.describe Tidewave::Middleware do
     end
   end
 
-  describe "MCP delegation" do
+  describe "MCP endpoint" do
     context "with allowed access" do
       before do
         config.allow_remote_access = true
       end
 
-      it "delegates SSE route to FastMCP" do
+      it "returns 405 Method Not Allowed for GET requests (no SSE)" do
         get "/tidewave/mcp"
-        # FastMCP should handle this route, we just verify it doesn't return our home page
-        expect(last_response.body).not_to include("<html>")
+        expect(last_response.status).to eq(405)
+        expect(last_response.headers["Content-Type"]).to eq("application/json")
+
+        body = JSON.parse(last_response.body)
+        expect(body["error"]["code"]).to eq(-32601)
+        expect(body["error"]["message"]).to include("Method not allowed")
       end
 
-      it "delegates messages route to FastMCP" do
-        post "/tidewave/mcp/message"
-        # FastMCP should handle this route, we just verify it doesn't return our home page
-        expect(last_response.body).not_to include("<html>")
+      it "handles POST requests to MCP endpoint" do
+        # Send a valid JSON-RPC 2.0 ping request
+        request_body = {
+          jsonrpc: "2.0",
+          method: "ping",
+          id: 1
+        }
+
+        post "/tidewave/mcp", JSON.generate(request_body), { "CONTENT_TYPE" => "application/json" }
+        expect(last_response.status).to eq(200)
+        expect(last_response.headers["Content-Type"]).to eq("application/json")
+
+        # Should get a valid JSON-RPC response
+        body = JSON.parse(last_response.body)
+        expect(body["jsonrpc"]).to eq("2.0")
+        expect(body["id"]).to eq(1)
       end
     end
 
@@ -112,13 +128,13 @@ RSpec.describe Tidewave::Middleware do
         config.allow_remote_access = false
       end
 
-      it "blocks SSE route for unauthorized IPs" do
+      it "blocks GET requests for unauthorized IPs" do
         get "/tidewave/mcp", {}, { "REMOTE_ADDR" => "192.168.1.100" }
         expect(last_response.status).to eq(403)
       end
 
-      it "blocks messages route for unauthorized IPs" do
-        post "/tidewave/mcp/message", {}, { "REMOTE_ADDR" => "192.168.1.100" }
+      it "blocks POST requests for unauthorized IPs" do
+        post "/tidewave/mcp", JSON.generate({ jsonrpc: "2.0", method: "ping", id: 1 }), { "REMOTE_ADDR" => "192.168.1.100" }
         expect(last_response.status).to eq(403)
       end
     end
