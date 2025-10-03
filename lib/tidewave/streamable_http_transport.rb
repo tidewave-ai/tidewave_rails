@@ -19,25 +19,23 @@ module Tidewave
       @running = false
     end
 
-    # Start the transport
     def start
       @logger.debug("Starting Streamable HTTP transport (POST-only) at path: #{@path}")
       @running = true
     end
 
-    # Stop the transport
     def stop
       @logger.debug("Stopping Streamable HTTP transport")
       @running = false
     end
 
-    # Send a message (no-op for non-streaming transport)
+    # Send a message - capture response for synchronous HTTP
     # Required by FastMCP::Transports::BaseTransport interface
     def send_message(message)
-      @logger.debug("send_message called but ignored (no streaming support)")
+      @logger.debug("send_message called, capturing response: #{message.inspect}")
+      @captured_response = message
     end
 
-    # Rack middleware call
     def call(env)
       request = Rack::Request.new(env)
 
@@ -54,8 +52,6 @@ module Tidewave
     def handle_mcp_request(request, env)
       if request.post?
         handle_post_request(request)
-      elsif request.get?
-        method_not_allowed_response
       else
         method_not_allowed_response
       end
@@ -74,14 +70,16 @@ module Tidewave
           return json_rpc_error_response(400, -32600, "Invalid Request", nil)
         end
 
-        response = process_message(message)
+        # Capture the response that will be sent via send_message
+        @captured_response = nil
+        @server.handle_json_request(message)
 
-        @logger.debug("Sending response: #{response.inspect}")
+        @logger.debug("Sending response: #{@captured_response.inspect}")
 
         [
           200,
           { "Content-Type" => "application/json" },
-          [ JSON.generate(response) ]
+          [ JSON.generate(@captured_response) ]
         ]
       rescue JSON::ParserError => e
         @logger.error("Invalid JSON in request: #{e.message}")
