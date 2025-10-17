@@ -31,12 +31,6 @@ If you want to use Docker for development, you either need to enable the configu
 
 If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly. It also disables the `frame-ancestors` directive.
 
-### Web server requirements
-
-At the moment, Tidewave requires all requests to be processed by the same process. In case Tidewave cannot connect to your application, consider starting your Rails application as follows:
-
-    RAILS_MAX_THREADS=1 WEB_CONCURRENCY=1 rails server
-
 ### Production Environment
 
 Tidewave is a powerful tool that can help you develop your web application faster and more efficiently. However, it is important to note that Tidewave is not meant to be used in a production environment.
