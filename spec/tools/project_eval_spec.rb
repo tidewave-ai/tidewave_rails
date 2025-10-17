@@ -14,9 +14,7 @@ describe Tidewave::Tools::ProjectEval do
         properties: {
           arguments: {
             description: "The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.",
-            items: {
-              type: [ "string", "boolean", "integer", "number", "null", "object", "array" ]
-            },
+            items: {},
             type: "array"
           },
           code: {

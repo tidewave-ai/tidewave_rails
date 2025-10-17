@@ -18,9 +18,15 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
 
   arguments do
     required(:code).filled(:string).description("The Ruby code to evaluate")
-    optional(:arguments).array(:str?, :bool?, :int?, :float?, :nil?, :hash?, :array?).description("The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.")
+    optional(:arguments).value(:array).description("The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.")
     optional(:timeout).filled(:integer).description("The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).")
     optional(:json).hidden().filled(:bool).description("Whether to return the result as JSON with structured output containing result, success, stdout, and stderr fields. Defaults to false.")
+  end
+
+  def @input_schema.json_schema
+    schema = super
+    schema[:properties][:arguments][:items] = {}
+    schema
   end
 
   def call(code:, arguments: [], timeout: 30_000, json: false)
