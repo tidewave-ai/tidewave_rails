@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.4.0 (2025-10-17)
+
+* Use Streamable HTTP transport
+* Allow logger middleware to be customizable
+* Use FastMCP ~> 1.6.0
+
 ## v0.3.1 (2025-09-16)
 
 * Optimize `get_logs`
