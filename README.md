@@ -12,20 +12,9 @@ You can install Tidewave by adding the `tidewave` gem to the development group i
 gem "tidewave", group: :development
 ```
 
-Now access `/tidewave` route of your web application to enjoy Tidewave Web!
+Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
 
 ## Troubleshooting
-
-### Localhost requirement
-
-Tidewave expects your web application to be running on `localhost`. If you are not running on localhost, you may need to set some additional configuration. In particular, you must configure Tidewave to allow `allow_remote_access` and [optionally configure your Rails hosts](https://guides.rubyonrails.org/configuring.html#actiondispatch-hostauthorization). For example, in your `config/environments/development.rb`:
-
-```ruby
-config.hosts << "company.local"
-config.tidewave.allow_remote_access = true
-```
-
-If you want to use Docker for development, you either need to enable the configuration above or automatically redirect the relevant ports, as done by [devcontainers](https://code.visualstudio.com/docs/devcontainers/containers). See our [containers](https://hexdocs.pm/tidewave/containers.html) guide for more information.
 
 ### Content security policy
 
@@ -37,17 +26,28 @@ Tidewave is a powerful tool that can help you develop your web application faste
 
 Tidewave will raise an error if it is used in any environment where code reloading is disabled (which typically includes production).
 
+### Localhost requirement
+
+> This requirement only matters if you are not using the Tidewave app/CLI.
+
+Tidewave expects your web application to be running on `localhost`. If you are not running on localhost, you may need to set some additional configuration. In particular, you must configure Tidewave to allow `allow_remote_access` and [optionally configure your Rails hosts](https://guides.rubyonrails.org/configuring.html#actiondispatch-hostauthorization). For example, in your `config/environments/development.rb`:
+
+```ruby
+config.hosts << "company.local"
+config.tidewave.allow_remote_access = true
+```
+
+If you want to use Docker for development, you either need to enable the configuration above or automatically redirect the relevant ports, as done by [devcontainers](https://code.visualstudio.com/docs/devcontainers/containers). See our [containers](https://hexdocs.pm/tidewave/containers.html) guide for more information.
+
 ## Configuration
 
 You may configure `tidewave` using the following syntax:
 
 ```ruby
-  config.tidewave.allow_remote_access = true
+  config.tidewave.team = { id: "my-company" }
 ```
 
 The following config is available:
-
-  * `allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces as well. If you trust your network and need to access Tidewave from a different machine, this configuration can be set to `true`
 
   * `logger_middleware` - The logger middleware Tidewave should wrap to silence its own logs
 
