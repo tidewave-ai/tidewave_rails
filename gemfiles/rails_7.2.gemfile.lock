@@ -4,7 +4,7 @@ PATH
     tidewave (0.4.0)
       fast-mcp (~> 1.6.0)
       rack (>= 2.0)
-      rails (>= 7.1.0)
+      rails (>= 7.2.0)
 
 GEM
   remote: https://rubygems.org/
