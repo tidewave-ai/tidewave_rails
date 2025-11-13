@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "LICENSE", "README.md"]
   end
 
-  spec.add_dependency "rails", ">= 7.1.0"
+  spec.add_dependency "rails", ">= 7.2.0"
   spec.add_dependency "fast-mcp", "~> 1.6.0"
   spec.add_dependency "rack", ">= 2.0"
 end
