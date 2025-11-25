@@ -10,6 +10,27 @@ require "tidewave/quiet_requests_middleware"
 gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
 
+# Temporary monkey patching to address regression in FastMCP
+if Dry::Schema::Macros::Hash.method_defined?(:original_call)
+  Dry::Schema::Macros::Hash.class_eval do
+    def call(*args, &block)
+      if block
+        # Use current context to track nested context if available
+        context = MetadataContext.current
+        if context
+          context.with_nested(name) do
+            original_call(*args, &block)
+          end
+        else
+          original_call(*args, &block)
+        end
+      else
+        original_call(*args)
+      end
+    end
+  end
+end
+
 module Tidewave
   class Railtie < Rails::Railtie
     config.tidewave = Tidewave::Configuration.new()
