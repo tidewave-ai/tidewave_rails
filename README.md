@@ -34,7 +34,9 @@ config.session_store :cookie_store,
   assume_ssl: true
 ```
 
-The above will allow your application to run embedded within Tidewave, as long as it is using a secure domain (such as `admin.localhost`, `www.foobar.localhost`, etc).
+And make sure you are using `rack-session` version `2.1.0` or later.
+
+The above will allow your application to run embedded within Tidewave across multiple subdomains, as long as it is using a secure context (such as `admin.localhost`, `www.foobar.localhost`, etc).
 
 ### Content security policy
 
