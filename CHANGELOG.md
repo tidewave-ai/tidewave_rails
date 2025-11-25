@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.4.1 (2025-11-25)
+
+* Fix compatibility with hash fields in Dry schema
+
 ## v0.4.0 (2025-10-17)
 
 * Use Streamable HTTP transport
