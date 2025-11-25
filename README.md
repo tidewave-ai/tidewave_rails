@@ -6,7 +6,13 @@ This project can also be used as a standalone Model Context Protocol server for 
 
 ## Installation
 
-You can install Tidewave by adding the `tidewave` gem to the development group in your Gemfile:
+You can install Tidewave by running:
+
+```shell
+bundle add tidewave --group development
+```
+
+or by manully adding the `tidewave` gem to the development group in your Gemfile:
 
 ```ruby
 gem "tidewave", group: :development
