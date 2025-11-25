@@ -22,6 +22,20 @@ Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.h
 
 ## Troubleshooting
 
+### Using multiple hosts/subdomains
+
+If you are using multiple hosts/subdomains during development, you must use `*.localhost`, as such domains are considered secure by browsers. Additionally, add the following to `config/initializers/development.rb`:
+
+```ruby
+config.session_store :cookie_store,
+  key: "__your_app_session",
+  same_site: :none,
+  secure: true,
+  assume_ssl: true
+```
+
+The above will allow your application to run embedded within Tidewave, as long as it is using a secure domain (such as `admin.localhost`, `www.foobar.localhost`, etc).
+
 ### Content security policy
 
 If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly. It also disables the `frame-ancestors` directive.
@@ -31,19 +45,6 @@ If you have enabled Content-Security-Policy, Tidewave will automatically enable 
 Tidewave is a powerful tool that can help you develop your web application faster and more efficiently. However, it is important to note that Tidewave is not meant to be used in a production environment.
 
 Tidewave will raise an error if it is used in any environment where code reloading is disabled (which typically includes production).
-
-### Localhost requirement
-
-> This requirement only matters if you are not using the Tidewave app/CLI.
-
-Tidewave expects your web application to be running on `localhost`. If you are not running on localhost, you may need to set some additional configuration. In particular, you must configure Tidewave to allow `allow_remote_access` and [optionally configure your Rails hosts](https://guides.rubyonrails.org/configuring.html#actiondispatch-hostauthorization). For example, in your `config/environments/development.rb`:
-
-```ruby
-config.hosts << "company.local"
-config.tidewave.allow_remote_access = true
-```
-
-If you want to use Docker for development, you either need to enable the configuration above or automatically redirect the relevant ports, as done by [devcontainers](https://code.visualstudio.com/docs/devcontainers/containers). See our [containers](https://hexdocs.pm/tidewave/containers.html) guide for more information.
 
 ## Configuration
 
