@@ -1,7 +1,7 @@
 PATH
   remote: ..
   specs:
-    tidewave (0.4.0)
+    tidewave (0.4.1)
       fast-mcp (~> 1.6.0)
       rack (>= 2.0)
       rails (>= 7.1.0)
