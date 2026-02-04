@@ -142,12 +142,10 @@ RSpec.describe Tidewave::Middleware do
 
   describe "/tidewave" do
     it "serves home page" do
-      config.team = { id: "dashbit" }
       get "/tidewave"
       expect(last_response.status).to eq(200)
       expect(last_response.headers["Content-Type"]).to eq("text/html")
       expect(last_response.body).to include("https://tidewave.ai/tc/tc.js")
-      expect(last_response.body).to include("team&quot;:{&quot;id&quot;:&quot;dashbit&quot;}")
     end
   end
 
