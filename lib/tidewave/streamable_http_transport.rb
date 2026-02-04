@@ -76,11 +76,15 @@ module Tidewave
 
         @logger.debug("Sending response: #{@captured_response.inspect}")
 
-        [
-          200,
-          { "Content-Type" => "application/json" },
-          [ JSON.generate(@captured_response) ]
-        ]
+        if @captured_response
+          [
+            200,
+            { "Content-Type" => "application/json" },
+            [ JSON.generate(@captured_response) ]
+          ]
+        else
+          [ 202, { }, [] ]
+        end
       rescue JSON::ParserError => e
         @logger.error("Invalid JSON in request: #{e.message}")
         json_rpc_error_response(400, -32700, "Parse error", nil)
