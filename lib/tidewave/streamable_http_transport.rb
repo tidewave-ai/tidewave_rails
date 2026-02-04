@@ -83,7 +83,7 @@ module Tidewave
             [ JSON.generate(@captured_response) ]
           ]
         else
-          [ 202, { }, [] ]
+          [ 202, {}, [] ]
         end
       rescue JSON::ParserError => e
         @logger.error("Invalid JSON in request: #{e.message}")
