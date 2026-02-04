@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "open3"
 require "ipaddr"
 require "fast_mcp"
 require "rack/request"
@@ -13,7 +12,6 @@ require_relative "streamable_http_transport"
 class Tidewave::Middleware
   TIDEWAVE_ROUTE = "tidewave".freeze
   MCP_ROUTE = "mcp".freeze
-  SHELL_ROUTE = "shell".freeze
   CONFIG_ROUTE = "config".freeze
 
   INVALID_IP = <<~TEXT.freeze
@@ -64,8 +62,6 @@ class Tidewave::Middleware
         return home(request)
       when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
         return config_endpoint(request)
-      when [ "POST", [ TIDEWAVE_ROUTE, SHELL_ROUTE ] ]
-        return shell(request)
       end
     end
 
@@ -88,7 +84,6 @@ class Tidewave::Middleware
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta name="tidewave:config" content="#{ERB::Util.html_escape(JSON.generate(config))}" />
           <script type="module" src="#{@client_url}/tc/tc.js"></script>
         </head>
         <body></body>
@@ -114,66 +109,6 @@ class Tidewave::Middleware
   def forbidden(message)
     Rails.logger.warn(message)
     [ 403, { "Content-Type" => "text/plain" }, [ message ] ]
-  end
-
-  def shell(request)
-    body = request.body.read
-    return [ 400, { "Content-Type" => "text/plain" }, [ "Command body is required" ] ] if body.blank?
-
-    begin
-      parsed_body = JSON.parse(body)
-      cmd = parsed_body["command"]
-      return [ 400, { "Content-Type" => "text/plain" }, [ "Command field is required" ] ] if cmd.blank?
-    rescue JSON::ParserError
-      return [ 400, { "Content-Type" => "text/plain" }, [ "Invalid JSON in request body" ] ]
-    end
-
-    response = Rack::Response.new
-    response.status = 200
-    response.headers["Content-Type"] = "text/plain"
-
-    response.finish do |res|
-      begin
-        Open3.popen3(*cmd) do |stdin, stdout, stderr, wait_thr|
-          stdin.close
-
-          # Merge stdout and stderr streams
-          ios = [ stdout, stderr ]
-
-          until ios.empty?
-            ready = IO.select(ios, nil, nil, 0.1)
-            next unless ready
-
-            ready[0].each do |io|
-              begin
-                data = io.read_nonblock(4096)
-                if data
-                  # Write binary chunk: type (0 for data) + 4-byte length + data
-                  chunk = [ 0, data.bytesize ].pack("CN") + data
-                  res.write(chunk)
-                end
-              rescue IO::WaitReadable
-                # No data available right now
-              rescue EOFError
-                # Stream ended
-                ios.delete(io)
-              end
-            end
-          end
-
-          # Wait for process to complete and get exit status
-          exit_status = wait_thr.value.exitstatus
-          status_json = JSON.generate({ status: exit_status })
-          # Write binary chunk: type (1 for status) + 4-byte length + JSON data
-          chunk = [ 1, status_json.bytesize ].pack("CN") + status_json
-          res.write(chunk)
-        end
-      rescue => e
-        error_json = JSON.generate({ status: 213 })
-        chunk = [ 1, error_json.bytesize ].pack("CN") + error_json
-        res.write(chunk)
-      end
-    end
   end
 
   def valid_client_ip?(request)
