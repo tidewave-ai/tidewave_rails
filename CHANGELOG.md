@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.4.2 (2026-02-05)
+
+* Return 202 responses when there is no content (fix Codex compatibility)
+* Remove legacy endpoints (no longer used by Tidewave)
+
 ## v0.4.1 (2025-11-25)
 
 * Fix compatibility with hash fields in Dry schema
