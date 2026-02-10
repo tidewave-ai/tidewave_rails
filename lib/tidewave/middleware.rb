@@ -20,6 +20,8 @@ class Tidewave::Middleware
     If you really want to allow remote connections, set `config.tidewave.allow_remote_access = true`.
   TEXT
 
+  INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
+
   def initialize(app, config)
     @allow_remote_access = config.allow_remote_access
     @client_url = config.client_url
@@ -55,6 +57,7 @@ class Tidewave::Middleware
 
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
+      return forbidden(INVALID_ORIGIN) if request.get_header("HTTP_ORIGIN") && path != [ TIDEWAVE_ROUTE ]
 
       # The MCP routes are handled downstream by FastMCP
       case [ request.request_method, path ]

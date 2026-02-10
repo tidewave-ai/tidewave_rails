@@ -164,6 +164,30 @@ RSpec.describe Tidewave::Middleware do
     end
   end
 
+  describe "Origin header validation" do
+    it "allows requests with Origin header to /tidewave" do
+      get "/tidewave", {}, { "HTTP_ORIGIN" => "http://example.com" }
+      expect(last_response.status).to eq(200)
+    end
+
+    it "rejects requests with Origin header to /tidewave/mcp" do
+      get "/tidewave/mcp", {}, { "HTTP_ORIGIN" => "http://example.com" }
+      expect(last_response.status).to eq(403)
+      expect(last_response.body).to include("Tidewave does not accept requests with an origin header for this endpoint")
+    end
+
+    it "rejects requests with Origin header to /tidewave/config" do
+      get "/tidewave/config", {}, { "HTTP_ORIGIN" => "http://example.com" }
+      expect(last_response.status).to eq(403)
+      expect(last_response.body).to include("Tidewave does not accept requests with an origin header for this endpoint")
+    end
+
+    it "allows requests without Origin header to /tidewave/config" do
+      get "/tidewave/config"
+      expect(last_response.status).to eq(200)
+    end
+  end
+
   describe "edge cases" do
     it "handles trailing slashes" do
       get "/tidewave/"
