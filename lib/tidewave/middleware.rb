@@ -82,6 +82,10 @@ class Tidewave::Middleware
   def home(request)
     config = config_data
 
+    # We return a basic page that is used by Tidewave Web.
+    # Note that, by itself, this page is harmless and it
+    # cannot invoke any of the MCP endpoints, since the MCP
+    # refuses any requests with an Origin header.
     html = <<~HTML
       <html>
         <head>
