@@ -7,9 +7,6 @@ require "tidewave/middleware"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
 
-gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
-Dir[gem_tools_path].each { |f| require f }
-
 # Temporary monkey patching to address regression in FastMCP
 if defined?(Dry::Schema::Macros::Hash) && Dry::Schema::Macros::Hash.method_defined?(:original_call)
   Dry::Schema::Macros::Hash.class_eval do
