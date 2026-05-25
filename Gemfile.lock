@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     tidewave (0.4.2)
-      fast-mcp (~> 1.6.0)
       rack (>= 2.0)
       rails (>= 7.1.0)
 
@@ -80,8 +79,6 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
-    addressable (2.8.7)
-      public_suffix (>= 2.0.2, < 7.0)
     appraisal (2.5.0)
       bundler
       rake
@@ -96,46 +93,9 @@ GEM
     connection_pool (2.5.3)
     crass (1.0.6)
     date (3.4.1)
-    diff-lcs (1.6.2)
     drb (2.2.3)
-    dry-configurable (1.3.0)
-      dry-core (~> 1.1)
-      zeitwerk (~> 2.6)
-    dry-core (1.1.0)
-      concurrent-ruby (~> 1.0)
-      logger
-      zeitwerk (~> 2.6)
-    dry-inflector (1.2.0)
-    dry-initializer (3.2.0)
-    dry-logic (1.6.0)
-      bigdecimal
-      concurrent-ruby (~> 1.0)
-      dry-core (~> 1.1)
-      zeitwerk (~> 2.6)
-    dry-schema (1.14.1)
-      concurrent-ruby (~> 1.0)
-      dry-configurable (~> 1.0, >= 1.0.1)
-      dry-core (~> 1.1)
-      dry-initializer (~> 3.2)
-      dry-logic (~> 1.5)
-      dry-types (~> 1.8)
-      zeitwerk (~> 2.6)
-    dry-types (1.8.3)
-      bigdecimal (~> 3.0)
-      concurrent-ruby (~> 1.0)
-      dry-core (~> 1.0)
-      dry-inflector (~> 1.0)
-      dry-logic (~> 1.4)
-      zeitwerk (~> 2.6)
     erb (5.0.2)
     erubi (1.13.1)
-    fast-mcp (1.6.0)
-      addressable (~> 2.8)
-      base64
-      dry-schema (~> 1.14)
-      json (~> 2.0)
-      mime-types (~> 3.4)
-      rack (>= 2.0, < 4.0)
     globalid (1.2.1)
       activesupport (>= 6.1)
     i18n (1.14.7)
@@ -159,10 +119,6 @@ GEM
       net-smtp
     marcel (1.0.4)
     method_source (1.1.0)
-    mime-types (3.7.0)
-      logger
-      mime-types-data (~> 3.2025, >= 3.2025.0507)
-    mime-types-data (3.2025.0708)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
     minitest (5.25.5)
@@ -179,22 +135,6 @@ GEM
     nokogiri (1.18.9)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    nokogiri (1.18.9-aarch64-linux-gnu)
-      racc (~> 1.4)
-    nokogiri (1.18.9-aarch64-linux-musl)
-      racc (~> 1.4)
-    nokogiri (1.18.9-arm-linux-gnu)
-      racc (~> 1.4)
-    nokogiri (1.18.9-arm-linux-musl)
-      racc (~> 1.4)
-    nokogiri (1.18.9-arm64-darwin)
-      racc (~> 1.4)
-    nokogiri (1.18.9-x86_64-darwin)
-      racc (~> 1.4)
-    nokogiri (1.18.9-x86_64-linux-gnu)
-      racc (~> 1.4)
-    nokogiri (1.18.9-x86_64-linux-musl)
-      racc (~> 1.4)
     parallel (1.27.0)
     parser (3.3.8.0)
       ast (~> 2.4.1)
@@ -209,7 +149,6 @@ GEM
     psych (5.2.6)
       date
       stringio
-    public_suffix (6.0.2)
     racc (1.8.1)
     rack (3.1.16)
     rack-session (2.1.1)
@@ -256,23 +195,6 @@ GEM
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
-    rspec-core (3.13.5)
-      rspec-support (~> 3.13.0)
-    rspec-expectations (3.13.5)
-      diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.13.0)
-    rspec-mocks (3.13.5)
-      diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.13.0)
-    rspec-rails (8.0.1)
-      actionpack (>= 7.2)
-      activesupport (>= 7.2)
-      railties (>= 7.2)
-      rspec-core (~> 3.13)
-      rspec-expectations (~> 3.13)
-      rspec-mocks (~> 3.13)
-      rspec-support (~> 3.13)
-    rspec-support (3.13.4)
     rubocop (1.78.0)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -307,14 +229,11 @@ GEM
       bigdecimal
     sqlite3 (2.7.3)
       mini_portile2 (~> 2.8.0)
-    sqlite3 (2.7.3-aarch64-linux-gnu)
-    sqlite3 (2.7.3-aarch64-linux-musl)
-    sqlite3 (2.7.3-arm-linux-gnu)
-    sqlite3 (2.7.3-arm-linux-musl)
+    sqlite3 (2.7.3-aarch64-linux)
+    sqlite3 (2.7.3-arm-linux)
     sqlite3 (2.7.3-arm64-darwin)
     sqlite3 (2.7.3-x86_64-darwin)
-    sqlite3 (2.7.3-x86_64-linux-gnu)
-    sqlite3 (2.7.3-x86_64-linux-musl)
+    sqlite3 (2.7.3-x86_64-linux)
     stringio (3.1.7)
     thor (1.4.0)
     timeout (0.4.3)
@@ -332,20 +251,16 @@ GEM
     zeitwerk (2.7.3)
 
 PLATFORMS
-  aarch64-linux-gnu
-  aarch64-linux-musl
-  arm-linux-gnu
-  arm-linux-musl
+  aarch64-linux
+  arm-linux
   arm64-darwin
   ruby
   x86_64-darwin
-  x86_64-linux-gnu
-  x86_64-linux-musl
+  x86_64-linux
 
 DEPENDENCIES
   appraisal
   pry
-  rspec-rails
   rubocop-rails-omakase
   sequel
   sqlite3 (= 2.7.3)

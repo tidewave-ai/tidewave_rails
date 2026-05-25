@@ -1,32 +1,10 @@
 # frozen_string_literal: true
 
 require "logger"
-require "fileutils"
 require "tidewave/configuration"
 require "tidewave/middleware"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
-
-# Temporary monkey patching to address regression in FastMCP
-if defined?(Dry::Schema::Macros::Hash) && Dry::Schema::Macros::Hash.method_defined?(:original_call)
-  Dry::Schema::Macros::Hash.class_eval do
-    def call(*args, &block)
-      if block
-        # Use current context to track nested context if available
-        context = MetadataContext.current
-        if context
-          context.with_nested(name) do
-            original_call(*args, &block)
-          end
-        else
-          original_call(*args, &block)
-        end
-      else
-        original_call(*args)
-      end
-    end
-  end
-end
 
 class Tidewave
   class Railtie < Rails::Railtie

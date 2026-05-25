@@ -3,12 +3,21 @@
 require "ipaddr"
 require "json"
 require "rack/request"
-require "fast_mcp"
 require "tidewave/version"
 require "tidewave/tool"
 require "tidewave/database_adapter"
-require "tidewave/tools/base"
 require "tidewave/railtie" if defined?(Rails::Railtie)
+
+class Tidewave
+  module DatabaseAdapters
+    # This module is defined here to ensure it's available for autoloading.
+    # Individual adapters are loaded on-demand in database_adapter.rb.
+  end
+
+  module Tools
+    # This module is defined here to ensure it's available for autoloading.
+  end
+end
 
 gem_tools_path = File.expand_path("tidewave/tools/**/*.rb", __dir__)
 Dir[gem_tools_path].sort.each do |file|
@@ -38,11 +47,6 @@ class Tidewave
     project_name: "unknown",
     team: {}
   }.freeze
-
-  module DatabaseAdapters
-    # This module is defined here to ensure it's available for autoloading.
-    # Individual adapters are loaded on-demand in database_adapter.rb.
-  end
 
   def initialize(app, options = {})
     @app = app
@@ -237,7 +241,7 @@ class Tidewave
     return jsonrpc_error_response_body(request_id, -32601, "Tool '#{tool_name}' not found") if tool.nil?
 
     result = tool.validate_and_call(arguments)
-    jsonrpc_success_response(request_id, result)
+    jsonrpc_success_response(request_id, tool_result(result))
   rescue StandardError => error
     @logger&.error("Tool execution error: #{error.message}")
     jsonrpc_success_response(request_id, tool_error_result("Tool execution failed: #{error.message}"))
@@ -272,18 +276,40 @@ class Tidewave
 
   def tool_error_result(message)
     {
-      "content" => [
-        {
-          "type" => "text",
-          "text" => message
-        }
-      ],
+      "content" => [ text_content(message) ],
       "isError" => true
     }
   end
 
+  def tool_result(result)
+    if result.is_a?(Hash)
+      {
+        "content" => [ text_content(JSON.generate(result)) ],
+        "structuredContent" => result
+      }
+    else
+      {
+        "content" => [ text_content(tool_result_text(result)) ]
+      }
+    end
+  end
+
+  def tool_result_text(result)
+    return result if result.is_a?(String)
+
+    result.to_s
+  end
+
+  def text_content(text)
+    {
+      "type" => "text",
+      "text" => text
+    }
+  end
+
   def build_tool_registry
-    Tidewave::Tool.descendants.map(&:new).each_with_object({}) do |tool, registry|
+    Tidewave::Tool.descendants.each_with_object({}) do |tool_class, registry|
+      tool = tool_class.new
       name = tool.definition["name"]
       registry[name] = tool if name
     end

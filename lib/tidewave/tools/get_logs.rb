@@ -1,20 +1,43 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
-  tool_name "get_logs"
-  description <<~DESCRIPTION
+require "pathname"
+
+class Tidewave::Tools::GetLogs < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Returns all log output, excluding logs that were caused by other tool calls.
 
     Use this tool to check for request logs or potentially logged errors.
   DESCRIPTION
 
-  arguments do
-    required(:tail).filled(:integer).description("The number of log entries to return from the end of the log")
-    optional(:grep).filled(:string).description("Filter logs with the given regular expression (case insensitive). E.g. \"error\" when you want to capture errors in particular")
+  def definition
+    {
+      "name" => "get_logs",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "tail" => {
+            "type" => "integer",
+            "not" => {
+              "type" => "null"
+            },
+            "description" => "The number of log entries to return from the end of the log"
+          },
+          "grep" => {
+            "type" => "string",
+            "minLength" => 1,
+            "description" => "Filter logs with the given regular expression (case insensitive). E.g. \"error\" when you want to capture errors in particular"
+          }
+        },
+        "required" => [ "tail" ]
+      }
+    }
   end
 
-  def call(tail:, grep: nil)
-    log_file = Rails.root.join("log", "#{Rails.env}.log")
+  def call(arguments)
+    tail = arguments.fetch("tail")
+    grep = arguments["grep"]
+    log_file = project_root.join("log", "#{environment_name}.log")
     return "Log file not found" unless File.exist?(log_file)
 
     regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
@@ -31,6 +54,22 @@ class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
   end
 
   private
+
+  def project_root
+    if defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+      Pathname.new(Rails.root.to_s)
+    else
+      Pathname.pwd
+    end
+  end
+
+  def environment_name
+    if defined?(Rails) && Rails.respond_to?(:env) && Rails.env
+      Rails.env.to_s
+    else
+      ENV["RACK_ENV"] || ENV["RAILS_ENV"] || "development"
+    end
+  end
 
   def tail_lines(file_path)
     File.open(file_path, "rb") do |file|

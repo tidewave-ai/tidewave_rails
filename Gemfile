@@ -14,7 +14,6 @@ gem "rubocop-rails-omakase", require: false
 gem "sqlite3", "2.7.3"
 
 group :development, :test do
-  gem "rspec-rails"
   gem "pry"
   gem "appraisal"
   gem "sequel"

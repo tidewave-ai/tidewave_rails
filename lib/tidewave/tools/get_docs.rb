@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::GetDocs < Tidewave::Tools::Base
-  tool_name "get_docs"
-
-  description <<~DESCRIPTION
+class Tidewave::Tools::GetDocs < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Returns the documentation for the given reference.
 
     The reference may be a constant, most commonly classes and modules
@@ -16,11 +14,26 @@ class Tidewave::Tools::GetDocs < Tidewave::Tools::Base
     If that is the case, prefer this tool over grepping the file system.
   DESCRIPTION
 
-  arguments do
-    required(:reference).filled(:string).description("The constant/method to lookup, such String, String#gsub or File.executable?")
+  def definition
+    {
+      "name" => "get_docs",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "reference" => {
+            "type" => "string",
+            "minLength" => 1,
+            "description" => "The constant/method to lookup, such String, String#gsub or File.executable?"
+          }
+        },
+        "required" => [ "reference" ]
+      }
+    }
   end
 
-  def call(reference:)
+  def call(arguments)
+    reference = arguments.fetch("reference")
     file_path, line_number = Tidewave::Tools::GetSourceLocation.get_source_location(reference)
 
     if file_path

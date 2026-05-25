@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
-  tool_name "get_source_location"
+require "pathname"
 
-  description <<~DESCRIPTION
+class Tidewave::Tools::GetSourceLocation < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Returns the source location for the given reference.
 
     The reference may be a constant, most commonly classes and modules
@@ -17,55 +17,46 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
     You may also get the root location of a gem, you can use "dep:PACKAGE_NAME".
   DESCRIPTION
 
-  arguments do
-    required(:reference).filled(:string).description("The constant/method to lookup, such String, String#gsub or File.executable?")
+  def definition
+    {
+      "name" => "get_source_location",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "reference" => {
+            "type" => "string",
+            "description" => "The constant/method to lookup, such String, String#gsub or File.executable?",
+            "minLength" => 1
+          }
+        },
+        "required" => [ "reference" ]
+      }
+    }
   end
 
-  def call(reference:)
-    # Check if this is a package location request
+  def call(arguments)
+    reference = arguments.fetch("reference")
+
     if reference.start_with?("dep:")
-      package_name = reference.gsub("dep:", "")
-      return get_package_location(package_name)
-    end
-
-    file_path, line_number = self.class.get_source_location(reference)
-
-    if file_path
-      begin
-        relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
-        "#{relative_path}:#{line_number}"
-      rescue ArgumentError
-        # If the path cannot be made relative, return the absolute path
-        "#{file_path}:#{line_number}"
-      end
+      get_package_location(reference.delete_prefix("dep:"))
     else
-      raise NameError, "could not find source location for #{reference}"
-    end
-  end
+      file_path, line_number = self.class.get_source_location(reference)
+      raise NameError, "could not find source location for #{reference}" unless file_path
 
-  def get_package_location(package)
-    raise "dep: prefix only works with projects using Bundler" unless defined?(Bundler)
-    specs = Bundler.load.specs
-
-    spec = specs.find { |s| s.name == package }
-    if spec
-      spec.full_gem_path
-    else
-      raise "Package #{package} not found. Check your Gemfile for available packages."
+      format_source_location(file_path, line_number)
     end
   end
 
   def self.get_source_location(reference)
     constant_path, selector, method_name = reference.rpartition(/\.|#/)
-
-    # There are no selectors, so the method_name is a constant path
     return Object.const_source_location(method_name) if selector.empty?
 
     begin
       mod = Object.const_get(constant_path)
-    rescue NameError => e
-      raise e
-    rescue
+    rescue NameError => error
+      raise error
+    rescue StandardError
       raise "wrong or invalid reference #{reference}"
     end
 
@@ -76,5 +67,31 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tools::Base
     else
       mod.method(method_name).source_location
     end
+  end
+
+  private
+
+  def format_source_location(file_path, line_number)
+    relative_path = Pathname.new(file_path).relative_path_from(project_root)
+    "#{relative_path}:#{line_number}"
+  rescue ArgumentError
+    "#{file_path}:#{line_number}"
+  end
+
+  def project_root
+    if defined?(Rails) && Rails.respond_to?(:root) && Rails.root
+      Pathname.new(Rails.root.to_s)
+    else
+      Pathname.pwd
+    end
+  end
+
+  def get_package_location(package)
+    raise "dep: prefix only works with projects using Bundler" unless defined?(Bundler)
+
+    spec = Bundler.load.specs.find { |loaded_spec| loaded_spec.name == package }
+    return spec.full_gem_path if spec
+
+    raise "Package #{package} not found. Check your Gemfile for available packages."
   end
 end

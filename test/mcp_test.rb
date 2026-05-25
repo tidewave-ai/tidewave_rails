@@ -2,7 +2,20 @@
 
 require "test_helper"
 
+TIDEWAVE_MCP_TEST_MODULE_LINE = __LINE__ + 1
+class TidewaveMcpTestModule
+end
+
 class TidewaveMcpTest < Minitest::Test
+  TOOL_NAMES = %w[
+    execute_sql_query
+    get_docs
+    get_logs
+    get_models
+    get_source_location
+    project_eval
+  ].freeze
+
   def setup
     @downstream_app = ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] }
     @app = Tidewave.new(@downstream_app, allow_remote_access: true)
@@ -108,7 +121,7 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal false, payload.dig("result", "capabilities", "tools", "listChanged")
     assert_equal "tidewave", payload.dig("result", "serverInfo", "name")
     assert_equal Tidewave::VERSION, payload.dig("result", "serverInfo", "version")
-    assert_equal ["hello_world"], payload.dig("result", "tools").map { |tool| tool["name"] }
+    assert_equal TOOL_NAMES, payload.dig("result", "tools").map { |tool| tool["name"] }.sort
   end
 
   def test_tools_list_returns_loaded_tools
@@ -122,8 +135,9 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal 200, status
     tools = JSON.parse(body).dig("result", "tools")
 
-    assert_equal ["hello_world"], tools.map { |tool| tool["name"] }
-    assert_equal "Returns a hello world greeting.", tools.first["description"]
+    assert_equal TOOL_NAMES, tools.map { |tool| tool["name"] }.sort
+    get_source_location = tools.find { |tool| tool["name"] == "get_source_location" }
+    assert_equal "Returns the source location for the given reference.\n", get_source_location["description"].lines.first
   end
 
   def test_unknown_tool_returns_method_not_found
@@ -155,12 +169,57 @@ class TidewaveMcpTest < Minitest::Test
         jsonrpc: "2.0",
         method: "tools/call",
         id: 1,
-        params: { name: "hello_world", arguments: {} }
+        params: { name: "get_source_location", arguments: { reference: "TidewaveMcpTestModule" } }
       })
     )
 
     assert_equal 200, status
-    assert_equal "Hello, world!", JSON.parse(body).dig("result", "content", 0, "text")
+    assert_equal "test/mcp_test.rb:#{TIDEWAVE_MCP_TEST_MODULE_LINE}", JSON.parse(body).dig("result", "content", 0, "text")
+  end
+
+  def test_tool_call_includes_structured_content_for_hash_results
+    adapter = Object.new
+    adapter.define_singleton_method(:execute_query) do |_query, _arguments|
+      {
+        columns: [ "id", "name" ],
+        rows: [ [ 1, "example" ] ],
+        row_count: 1,
+        adapter: "SQLite",
+        database: ":memory:"
+      }
+    end
+
+    Tidewave::DatabaseAdapter.stub(:current, adapter) do
+      status, _headers, body = perform_request(
+        @app,
+        path: "/tidewave/mcp",
+        method: "POST",
+        body: JSON.generate({
+          jsonrpc: "2.0",
+          method: "tools/call",
+          id: 1,
+          params: { name: "execute_sql_query", arguments: { query: "SELECT 1" } }
+        })
+      )
+
+      payload = JSON.parse(body)
+
+      assert_equal 200, status
+      assert_equal(
+        {
+          "columns" => [ "id", "name" ],
+          "rows" => [ [ 1, "example" ] ],
+          "row_count" => 1,
+          "adapter" => "SQLite",
+          "database" => ":memory:"
+        },
+        payload.dig("result", "structuredContent")
+      )
+      assert_equal(
+        "{\"columns\":[\"id\",\"name\"],\"rows\":[[1,\"example\"]],\"row_count\":1,\"adapter\":\"SQLite\",\"database\":\":memory:\"}",
+        payload.dig("result", "content", 0, "text")
+      )
+    end
   end
 
   private

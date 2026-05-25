@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
-  tool_name "execute_sql_query"
-  description <<~DESCRIPTION
+class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Executes the given SQL query against the database connection.
     Returns the result as a Ruby data structure.
 
@@ -17,20 +16,32 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tools::Base
     For MySQL, use ? for parameter placeholders.
   DESCRIPTION
 
-  arguments do
-    required(:query).filled(:string).description("The SQL query to execute. For PostgreSQL, use $1, $2 placeholders. For MySQL, use ? placeholders.")
-    optional(:arguments).value(:array).description("The arguments to pass to the query. The query must contain corresponding parameter placeholders.")
+  def definition
+    {
+      "name" => "execute_sql_query",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "query" => {
+            "type" => "string",
+            "minLength" => 1,
+            "description" => "The SQL query to execute. For PostgreSQL, use $1, $2 placeholders. For MySQL, use ? placeholders."
+          },
+          "arguments" => {
+            "type" => "array",
+            "items" => {},
+            "description" => "The arguments to pass to the query. The query must contain corresponding parameter placeholders."
+          }
+        },
+        "required" => [ "query" ]
+      }
+    }
   end
 
-  def @input_schema.json_schema
-    schema = super
-    schema[:properties][:arguments][:items] = {}
-    schema
-  end
-
-  RESULT_LIMIT = 50
-
-  def call(query:, arguments: [])
+  def call(arguments_hash)
+    query = arguments_hash.fetch("query")
+    arguments = arguments_hash.fetch("arguments", [])
     Tidewave::DatabaseAdapter.current.execute_query(query, arguments)
   end
 end
