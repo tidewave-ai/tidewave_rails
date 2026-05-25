@@ -3,10 +3,6 @@
 require "test_helper"
 
 class TidewaveExecuteSqlQueryTest < Minitest::Test
-  def setup
-    @tool = Tidewave::Tools::ExecuteSqlQuery.new
-  end
-
   def test_validate_and_call_returns_adapter_result
     adapter = Object.new
     adapter.define_singleton_method(:execute_query) do |query, arguments|
@@ -21,8 +17,9 @@ class TidewaveExecuteSqlQueryTest < Minitest::Test
       }
     end
 
-    Tidewave::DatabaseAdapter.stub(:current, adapter) do
-      result = @tool.validate_and_call({ "query" => "SELECT 1 as id, 'test' as name" })
+    Tidewave::DatabaseAdapter.stub(:for, adapter) do
+      tool = Tidewave::Tools::ExecuteSqlQuery.new(orm_adapter: :active_record)
+      result = tool.validate_and_call({ "query" => "SELECT 1 as id, 'test' as name" })
 
       assert_equal [ "id", "name" ], result[:columns]
       assert_equal [ [ 1, "test" ] ], result[:rows]
@@ -40,8 +37,9 @@ class TidewaveExecuteSqlQueryTest < Minitest::Test
       }
     end
 
-    Tidewave::DatabaseAdapter.stub(:current, adapter) do
-      result = @tool.validate_and_call({
+    Tidewave::DatabaseAdapter.stub(:for, adapter) do
+      tool = Tidewave::Tools::ExecuteSqlQuery.new(orm_adapter: :active_record)
+      result = tool.validate_and_call({
         "query" => "SELECT ? as id, ? as name",
         "arguments" => [ 42, "dynamic" ]
       })
@@ -52,10 +50,18 @@ class TidewaveExecuteSqlQueryTest < Minitest::Test
   end
 
   def test_validate_and_call_requires_query
+    tool = Tidewave::Tools::ExecuteSqlQuery.new(orm_adapter: :active_record)
+
     error = assert_raises(ArgumentError) do
-      @tool.validate_and_call({})
+      tool.validate_and_call({})
     end
 
     assert_equal "Invalid arguments: missing required property 'query'", error.message
+  end
+
+  def test_definition_is_nil_when_orm_adapter_is_missing
+    tool = Tidewave::Tools::ExecuteSqlQuery.new
+
+    assert_nil tool.definition
   end
 end

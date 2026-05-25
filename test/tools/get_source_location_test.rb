@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "pathname"
 require "test_helper"
 
 TIDEWAVE_GET_SOURCE_LOCATION_MODULE_LINE = __LINE__ + 1
@@ -20,7 +21,7 @@ TidewaveGetSourceLocationTestModule::BAZ = 123
 
 class TidewaveGetSourceLocationTest < Minitest::Test
   def setup
-    @tool = Tidewave::Tools::GetSourceLocation.new
+    @tool = Tidewave::Tools::GetSourceLocation.new(root: Pathname.pwd)
   end
 
   def test_validate_and_call_returns_module_source_location

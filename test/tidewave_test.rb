@@ -7,10 +7,10 @@ class TidewaveTest < Minitest::Test
     @downstream_calls = []
     @downstream_app = lambda do |env|
       @downstream_calls << env
-      [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ]
+      [ 200, { "Content-Type" => "text/plain", "X-Frame-Options" => "DENY" }, [ "demo response" ] ]
     end
 
-    @app = Tidewave.new(@downstream_app, allow_remote_access: true)
+    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
   end
 
   def test_non_tidewave_route_passes_through
@@ -20,6 +20,13 @@ class TidewaveTest < Minitest::Test
     assert_equal "text/plain", headers["Content-Type"]
     assert_equal "demo response", body
     assert_equal 1, @downstream_calls.length
+  end
+
+  def test_non_tidewave_route_strips_x_frame_options
+    status, headers, _body = perform_request(@app, path: "/")
+
+    assert_equal 200, status
+    assert_nil headers["X-Frame-Options"]
   end
 
   def test_home_route_returns_html
@@ -39,7 +46,7 @@ class TidewaveTest < Minitest::Test
   end
 
   def test_security_remote_ip_blocked
-    app = Tidewave.new(@downstream_app, allow_remote_access: false)
+    app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app")
 
     [ "192.168.1.100", "1.1.1.1", "invalid", "2001:4860:4860::8888" ].each do |ip|
       status, _headers, body = perform_request(app, path: "/tidewave/config", remote_addr: ip)
@@ -50,7 +57,7 @@ class TidewaveTest < Minitest::Test
   end
 
   def test_security_remote_ip_allowed_when_enabled
-    app = Tidewave.new(@downstream_app, allow_remote_access: true)
+    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
     status, headers, body = perform_request(app, path: "/tidewave/config", remote_addr: "192.168.1.100")
 
     assert_equal 200, status
@@ -59,7 +66,7 @@ class TidewaveTest < Minitest::Test
   end
 
   def test_local_ip_detection
-    app = Tidewave.new(@downstream_app, allow_remote_access: false)
+    app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app")
 
     [ "127.0.0.1", "127.0.0.2", "127.0.0.255", "::1", "::ffff:127.0.0.1" ].each do |ip|
       status, headers, body = perform_request(app, path: "/tidewave/config", remote_addr: ip)
@@ -74,6 +81,7 @@ class TidewaveTest < Minitest::Test
     app = Tidewave.new(
       @downstream_app,
       allow_remote_access: true,
+      project_name: "demo-app",
       team: { id: "dashbit" }
     )
 
@@ -83,10 +91,18 @@ class TidewaveTest < Minitest::Test
     assert_equal "application/json", headers["Content-Type"]
 
     payload = JSON.parse(body)
-    assert_equal "unknown", payload["framework_type"]
+    assert_equal "rack", payload["framework_type"]
     assert_equal Tidewave::VERSION, payload["tidewave_version"]
     assert_equal({ "id" => "dashbit" }, payload["team"])
-    assert_equal "unknown", payload["project_name"]
+    assert_equal "demo-app", payload["project_name"]
+  end
+
+  def test_project_name_is_required
+    error = assert_raises(ArgumentError) do
+      Tidewave.new(@downstream_app, allow_remote_access: true)
+    end
+
+    assert_equal "project_name is required", error.message
   end
 
   def test_unmatched_tidewave_methods_return_not_found
@@ -130,7 +146,7 @@ class TidewaveTest < Minitest::Test
   def test_logs_security_rejections
     logger = Minitest::Mock.new
     logger.expect(:warn, nil, [Tidewave::INVALID_IP])
-    app = Tidewave.new(@downstream_app, allow_remote_access: false, logger: logger)
+    app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app", logger: logger)
 
     status, _headers, _body = perform_request(app, path: "/tidewave/config", remote_addr: "192.168.1.100")
 

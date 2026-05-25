@@ -21,8 +21,6 @@ end
 
 gem_tools_path = File.expand_path("tidewave/tools/**/*.rb", __dir__)
 Dir[gem_tools_path].sort.each do |file|
-  next if file.end_with?("/base.rb")
-
   require file
 end
 
@@ -43,14 +41,15 @@ class Tidewave
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
     client_url: "https://tidewave.ai",
-    framework_type: "unknown",
-    project_name: "unknown",
+    framework_type: "rack",
     team: {}
   }.freeze
 
   def initialize(app, options = {})
     @app = app
     @options = DEFAULT_OPTIONS.merge(options || {})
+    raise ArgumentError, "project_name is required" if @options[:project_name].to_s.empty?
+
     @logger = @options[:logger]
     @tools = build_tool_registry
   end
@@ -65,20 +64,26 @@ class Tidewave
 
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
-        return home_endpoint(request)
+        home_endpoint(request)
       when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
-        return config_endpoint(request)
+        config_endpoint(request)
       when [ "POST", [ TIDEWAVE_ROUTE, MCP_ROUTE ] ]
-        return mcp_endpoint(request)
+        mcp_endpoint(request)
+      else
+        not_found
       end
-
-      return not_found
+    else
+      strip_x_frame_options(@app.call(env))
     end
-
-    @app.call(env)
   end
 
   private
+
+  def strip_x_frame_options(response)
+    status, headers, body = response
+    headers.delete("X-Frame-Options")
+    [ status, headers, body ]
+  end
 
   def home_endpoint(_request)
     client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
@@ -309,8 +314,11 @@ class Tidewave
 
   def build_tool_registry
     Tidewave::Tool.descendants.each_with_object({}) do |tool_class, registry|
-      tool = tool_class.new
-      name = tool.definition["name"]
+      tool = tool_class.new(@options)
+      definition = tool.definition
+      next if definition.nil?
+
+      name = definition["name"]
       registry[name] = tool if name
     end
   end

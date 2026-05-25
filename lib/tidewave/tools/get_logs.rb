@@ -9,7 +9,13 @@ class Tidewave::Tools::GetLogs < Tidewave::Tool
     Use this tool to check for request logs or potentially logged errors.
   DESCRIPTION
 
+  def initialize(options = {})
+    @log_file = options[:log_file] ? Pathname.new(options[:log_file].to_s) : nil
+  end
+
   def definition
+    return nil unless @log_file
+
     {
       "name" => "get_logs",
       "description" => DESCRIPTION,
@@ -37,13 +43,12 @@ class Tidewave::Tools::GetLogs < Tidewave::Tool
   def call(arguments)
     tail = arguments.fetch("tail")
     grep = arguments["grep"]
-    log_file = project_root.join("log", "#{environment_name}.log")
-    return "Log file not found" unless File.exist?(log_file)
+    return "Log file not found" unless @log_file&.exist?
 
     regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
     matching_lines = []
 
-    tail_lines(log_file) do |line|
+    tail_lines(@log_file) do |line|
       if regex.nil? || line.match?(regex)
         matching_lines.unshift(line)
         break if matching_lines.size >= tail
@@ -54,22 +59,6 @@ class Tidewave::Tools::GetLogs < Tidewave::Tool
   end
 
   private
-
-  def project_root
-    if defined?(Rails) && Rails.respond_to?(:root) && Rails.root
-      Pathname.new(Rails.root.to_s)
-    else
-      Pathname.pwd
-    end
-  end
-
-  def environment_name
-    if defined?(Rails) && Rails.respond_to?(:env) && Rails.env
-      Rails.env.to_s
-    else
-      ENV["RACK_ENV"] || ENV["RAILS_ENV"] || "development"
-    end
-  end
 
   def tail_lines(file_path)
     File.open(file_path, "rb") do |file|

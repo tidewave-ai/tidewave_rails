@@ -13,6 +13,9 @@ class Tidewave
       end
     end
 
+    def initialize(_options = {})
+    end
+
     def definition
       raise NotImplementedError, "#{self.class} must implement #definition"
     end

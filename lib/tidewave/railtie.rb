@@ -2,7 +2,6 @@
 
 require "logger"
 require "tidewave/configuration"
-require "tidewave/middleware"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
 
@@ -15,10 +14,21 @@ class Tidewave
         raise "For security reasons, Tidewave is only supported in environments where config.enable_reloading is true (typically development)"
       end
 
+      tidewave_config = app.config.tidewave
+
       app.config.middleware.insert_after(
         ActionDispatch::Callbacks,
-        Tidewave::Middleware,
-        app.config.tidewave
+        Tidewave,
+        allow_remote_access: tidewave_config.allow_remote_access,
+        client_url: tidewave_config.client_url,
+        framework_type: "rails",
+        project_name: app.class.module_parent.name,
+        team: tidewave_config.team,
+        logger: tidewave_config.logger || Rails.logger,
+        root: Rails.root,
+        log_file: Rails.root.join("log", "#{Rails.env}.log"),
+        orm_adapter: tidewave_config.preferred_orm,
+        before_reload: -> { app.eager_load! }
       )
 
       app.config.after_initialize do

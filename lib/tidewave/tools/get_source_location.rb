@@ -17,6 +17,10 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tool
     You may also get the root location of a gem, you can use "dep:PACKAGE_NAME".
   DESCRIPTION
 
+  def initialize(options = {})
+    @root = options[:root] ? Pathname.new(options[:root].to_s) : Pathname.pwd
+  end
+
   def definition
     {
       "name" => "get_source_location",
@@ -72,18 +76,10 @@ class Tidewave::Tools::GetSourceLocation < Tidewave::Tool
   private
 
   def format_source_location(file_path, line_number)
-    relative_path = Pathname.new(file_path).relative_path_from(project_root)
+    relative_path = Pathname.new(file_path).relative_path_from(@root)
     "#{relative_path}:#{line_number}"
   rescue ArgumentError
     "#{file_path}:#{line_number}"
-  end
-
-  def project_root
-    if defined?(Rails) && Rails.respond_to?(:root) && Rails.root
-      Pathname.new(Rails.root.to_s)
-    else
-      Pathname.pwd
-    end
   end
 
   def get_package_location(package)

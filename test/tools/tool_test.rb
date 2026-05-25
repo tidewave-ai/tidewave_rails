@@ -36,14 +36,7 @@ class TidewaveToolTest < Minitest::Test
       end
 
       def call(arguments)
-        {
-          "content" => [
-            {
-              "type" => "text",
-              "text" => JSON.generate(arguments)
-            }
-          ]
-        }
+        arguments
       end
     end
 
@@ -63,10 +56,15 @@ class TidewaveToolTest < Minitest::Test
       "options" => { "mode" => "fast" }
     })
 
-    assert_equal "text", result.dig("content", 0, "type")
     assert_equal(
-      "{\"name\":\"hello\",\"count\":2,\"enabled\":false,\"tags\":[\"one\",2],\"options\":{\"mode\":\"fast\"}}",
-      result.dig("content", 0, "text")
+      {
+        "name" => "hello",
+        "count" => 2,
+        "enabled" => false,
+        "tags" => [ "one", 2 ],
+        "options" => { "mode" => "fast" }
+      },
+      result
     )
   end
 
@@ -76,7 +74,7 @@ class TidewaveToolTest < Minitest::Test
       "count" => 1
     })
 
-    assert_equal "{\"name\":\"hello\",\"count\":1,\"enabled\":false}", result.dig("content", 0, "text")
+    assert_equal({ "name" => "hello", "count" => 1, "enabled" => false }, result)
   end
 
   def test_validate_and_call_requires_a_hash

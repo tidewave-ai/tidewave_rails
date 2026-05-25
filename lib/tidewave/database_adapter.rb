@@ -3,12 +3,7 @@
 class Tidewave
   class DatabaseAdapter
     class << self
-      def current
-        @current ||= create_adapter
-      end
-
-      def create_adapter
-        orm_type = Rails.application.config.tidewave.preferred_orm
+      def for(orm_type)
         case orm_type
         when :active_record
           require_relative "database_adapters/active_record"

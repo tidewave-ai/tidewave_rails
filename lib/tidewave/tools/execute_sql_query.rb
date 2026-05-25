@@ -16,7 +16,13 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tool
     For MySQL, use ? for parameter placeholders.
   DESCRIPTION
 
+  def initialize(options = {})
+    @database_adapter = Tidewave::DatabaseAdapter.for(options[:orm_adapter]) if options[:orm_adapter]
+  end
+
   def definition
+    return nil unless @database_adapter
+
     {
       "name" => "execute_sql_query",
       "description" => DESCRIPTION,
@@ -42,6 +48,6 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tool
   def call(arguments_hash)
     query = arguments_hash.fetch("query")
     arguments = arguments_hash.fetch("arguments", [])
-    Tidewave::DatabaseAdapter.current.execute_query(query, arguments)
+    @database_adapter.execute_query(query, arguments)
   end
 end

@@ -13,31 +13,26 @@ class TidewaveGetModelsComment
 end
 
 class TidewaveGetModelsTest < Minitest::Test
-  def setup
-    @tool = Tidewave::Tools::GetModels.new
-  end
-
   def test_validate_and_call_returns_models_with_source_locations
     eager_loaded = false
-    application = Object.new
-    application.define_singleton_method(:eager_load!) { eager_loaded = true }
-
     adapter = Object.new
     adapter.define_singleton_method(:get_models) do
       [ TidewaveGetModelsUser, TidewaveGetModelsPost, TidewaveGetModelsComment ]
     end
 
-    Rails.stub(:application, application) do
-      Rails.stub(:root, Pathname.pwd) do
-        Tidewave::DatabaseAdapter.stub(:current, adapter) do
-          result = @tool.validate_and_call({})
+    Tidewave::DatabaseAdapter.stub(:for, adapter) do
+      tool = Tidewave::Tools::GetModels.new(
+        root: Pathname.pwd,
+        orm_adapter: :active_record,
+        before_reload: -> { eager_loaded = true }
+      )
 
-          assert_includes result, "* TidewaveGetModelsUser at test/tools/get_models_test.rb:"
-          assert_includes result, "* TidewaveGetModelsPost at test/tools/get_models_test.rb:"
-          assert_includes result, "* TidewaveGetModelsComment at test/tools/get_models_test.rb:"
-          assert_equal true, eager_loaded
-        end
-      end
+      result = tool.validate_and_call({})
+
+      assert_includes result, "* TidewaveGetModelsUser at test/tools/get_models_test.rb:"
+      assert_includes result, "* TidewaveGetModelsPost at test/tools/get_models_test.rb:"
+      assert_includes result, "* TidewaveGetModelsComment at test/tools/get_models_test.rb:"
+      assert_equal true, eager_loaded
     end
   end
 
@@ -46,22 +41,28 @@ class TidewaveGetModelsTest < Minitest::Test
     adapter.define_singleton_method(:get_models) do
       [ TidewaveGetModelsUser, Struct.new(:name).new("TidewaveMissingSourceModel") ]
     end
-
     original_const_source_location = Object.method(:const_source_location)
 
-    Rails.stub(:application, nil) do
-      Rails.stub(:root, Pathname.pwd) do
-        Object.stub(:const_source_location, lambda { |name|
-          name == "TidewaveMissingSourceModel" ? nil : original_const_source_location.call(name)
-        }) do
-          Tidewave::DatabaseAdapter.stub(:current, adapter) do
-            result = @tool.validate_and_call({})
+    Tidewave::DatabaseAdapter.stub(:for, adapter) do
+      tool = Tidewave::Tools::GetModels.new(
+        root: Pathname.pwd,
+        orm_adapter: :active_record
+      )
 
-            assert_includes result, "* TidewaveGetModelsUser at test/tools/get_models_test.rb:"
-            assert_includes result, "* TidewaveMissingSourceModel"
-          end
-        end
+      result = Object.stub(:const_source_location, lambda { |name|
+        name == "TidewaveMissingSourceModel" ? nil : original_const_source_location.call(name)
+      }) do
+        tool.validate_and_call({})
       end
+
+      assert_includes result, "* TidewaveGetModelsUser at test/tools/get_models_test.rb:"
+      assert_includes result, "* TidewaveMissingSourceModel"
     end
+  end
+
+  def test_definition_is_nil_when_orm_adapter_is_missing
+    tool = Tidewave::Tools::GetModels.new(root: Pathname.pwd)
+
+    assert_nil tool.definition
   end
 end

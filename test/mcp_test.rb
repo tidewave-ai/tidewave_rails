@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "tmpdir"
 
 TIDEWAVE_MCP_TEST_MODULE_LINE = __LINE__ + 1
 class TidewaveMcpTestModule
@@ -8,6 +9,12 @@ end
 
 class TidewaveMcpTest < Minitest::Test
   TOOL_NAMES = %w[
+    get_docs
+    get_source_location
+    project_eval
+  ].freeze
+
+  CONFIGURED_TOOL_NAMES = %w[
     execute_sql_query
     get_docs
     get_logs
@@ -18,7 +25,7 @@ class TidewaveMcpTest < Minitest::Test
 
   def setup
     @downstream_app = ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] }
-    @app = Tidewave.new(@downstream_app, allow_remote_access: true)
+    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
   end
 
   def test_ping_returns_jsonrpc_response
@@ -140,6 +147,35 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal "Returns the source location for the given reference.\n", get_source_location["description"].lines.first
   end
 
+  def test_tools_list_includes_conditional_tools_when_configured
+    Dir.mktmpdir do |dir|
+      log_file = File.join(dir, "development.log")
+      File.write(log_file, "log line\n")
+
+      adapter = Object.new
+      Tidewave::DatabaseAdapter.stub(:for, adapter) do
+        app = Tidewave.new(
+          @downstream_app,
+          allow_remote_access: true,
+          project_name: "test-app",
+          orm_adapter: :active_record,
+          log_file: log_file
+        )
+
+        status, _headers, body = perform_request(
+          app,
+          path: "/tidewave/mcp",
+          method: "POST",
+          body: JSON.generate({ jsonrpc: "2.0", method: "tools/list", id: 1 })
+        )
+
+        assert_equal 200, status
+        tools = JSON.parse(body).dig("result", "tools")
+        assert_equal CONFIGURED_TOOL_NAMES, tools.map { |tool| tool["name"] }.sort
+      end
+    end
+  end
+
   def test_unknown_tool_returns_method_not_found
     status, _headers, body = perform_request(
       @app,
@@ -189,9 +225,10 @@ class TidewaveMcpTest < Minitest::Test
       }
     end
 
-    Tidewave::DatabaseAdapter.stub(:current, adapter) do
+    Tidewave::DatabaseAdapter.stub(:for, adapter) do
+      app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app", orm_adapter: :active_record)
       status, _headers, body = perform_request(
-        @app,
+        app,
         path: "/tidewave/mcp",
         method: "POST",
         body: JSON.generate({
