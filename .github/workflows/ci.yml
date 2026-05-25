@@ -14,6 +14,7 @@ jobs:
         appraisal: ["rails_7.1", "rails_7.2", "rails_8.0"]
     env:
       BUNDLE_GEMFILE: gemfiles/${{ matrix.appraisal }}.gemfile
+      BUNDLE_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby ${{ matrix.ruby-version }}
