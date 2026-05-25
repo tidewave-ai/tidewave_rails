@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Tidewave
+class Tidewave
   module DatabaseAdapters
     class Sequel < DatabaseAdapter
       RESULT_LIMIT = 50

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Tidewave
+class Tidewave
   class Configuration
     attr_accessor :logger, :allow_remote_access, :preferred_orm, :dev, :client_url, :team, :logger_middleware
 

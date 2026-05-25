@@ -11,7 +11,7 @@ gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
 Dir[gem_tools_path].each { |f| require f }
 
 # Temporary monkey patching to address regression in FastMCP
-if Dry::Schema::Macros::Hash.method_defined?(:original_call)
+if defined?(Dry::Schema::Macros::Hash) && Dry::Schema::Macros::Hash.method_defined?(:original_call)
   Dry::Schema::Macros::Hash.class_eval do
     def call(*args, &block)
       if block
@@ -31,7 +31,7 @@ if Dry::Schema::Macros::Hash.method_defined?(:original_call)
   end
 end
 
-module Tidewave
+class Tidewave
   class Railtie < Rails::Railtie
     config.tidewave = Tidewave::Configuration.new()
 

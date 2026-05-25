@@ -4,7 +4,7 @@ require "json"
 require "rack"
 require "fast_mcp"
 
-module Tidewave
+class Tidewave
   # Streamable HTTP transport for MCP (POST-only, no SSE)
   # This transport implements a simplified version of the MCP Streamable HTTP protocol
   # that only supports POST requests for JSON-RPC messages. Unlike the full protocol,

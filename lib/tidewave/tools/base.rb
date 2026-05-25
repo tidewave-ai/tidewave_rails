@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Tidewave
+class Tidewave
   module Tools
     class Base < FastMcp::Tool
     end
