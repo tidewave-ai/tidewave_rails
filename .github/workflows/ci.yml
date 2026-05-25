@@ -21,7 +21,7 @@ jobs:
           bundler-cache: true # runs 'bundle install' and caches installed gems automatically
 
       - name: Install appraisal dependencies
-        run: bundle exec appraisal install
+        run: bundle check --gemfile="gemfiles/${{ matrix.appraisal }}.gemfile" || bundle install --gemfile="gemfiles/${{ matrix.appraisal }}.gemfile" --retry 1
 
       - name: Run appraisal
         run: bundle exec appraisal ${{ matrix.appraisal }} ruby -Itest test/all_test.rb
