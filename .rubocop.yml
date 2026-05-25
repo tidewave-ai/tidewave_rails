@@ -8,3 +8,5 @@ Style/FrozenStringLiteralComment:
 AllCops:
   Exclude:
     - gemfiles/*
+    - vendor/bundle/**/*
+    - gemfiles/vendor/bundle/**/*

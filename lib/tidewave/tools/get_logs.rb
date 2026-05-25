@@ -1,26 +1,54 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::GetLogs < Tidewave::Tools::Base
-  tool_name "get_logs"
-  description <<~DESCRIPTION
+require "pathname"
+
+class Tidewave::Tools::GetLogs < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Returns all log output, excluding logs that were caused by other tool calls.
 
     Use this tool to check for request logs or potentially logged errors.
   DESCRIPTION
 
-  arguments do
-    required(:tail).filled(:integer).description("The number of log entries to return from the end of the log")
-    optional(:grep).filled(:string).description("Filter logs with the given regular expression (case insensitive). E.g. \"error\" when you want to capture errors in particular")
+  def initialize(options = {})
+    @log_file = options[:log_file] ? Pathname.new(options[:log_file].to_s) : nil
   end
 
-  def call(tail:, grep: nil)
-    log_file = Rails.root.join("log", "#{Rails.env}.log")
-    return "Log file not found" unless File.exist?(log_file)
+  def definition
+    return nil unless @log_file
+
+    {
+      "name" => "get_logs",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "tail" => {
+            "type" => "integer",
+            "not" => {
+              "type" => "null"
+            },
+            "description" => "The number of log entries to return from the end of the log"
+          },
+          "grep" => {
+            "type" => "string",
+            "minLength" => 1,
+            "description" => "Filter logs with the given regular expression (case insensitive). E.g. \"error\" when you want to capture errors in particular"
+          }
+        },
+        "required" => [ "tail" ]
+      }
+    }
+  end
+
+  def call(arguments)
+    tail = arguments.fetch("tail")
+    grep = arguments["grep"]
+    return "Log file not found" unless @log_file&.exist?
 
     regex = Regexp.new(grep, Regexp::IGNORECASE) if grep
     matching_lines = []
 
-    tail_lines(log_file) do |line|
+    tail_lines(@log_file) do |line|
       if regex.nil? || line.match?(regex)
         matching_lines.unshift(line)
         break if matching_lines.size >= tail

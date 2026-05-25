@@ -1,37 +1,11 @@
 # frozen_string_literal: true
 
 require "logger"
-require "fileutils"
 require "tidewave/configuration"
-require "tidewave/middleware"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
 
-gem_tools_path = File.expand_path("tools/**/*.rb", __dir__)
-Dir[gem_tools_path].each { |f| require f }
-
-# Temporary monkey patching to address regression in FastMCP
-if Dry::Schema::Macros::Hash.method_defined?(:original_call)
-  Dry::Schema::Macros::Hash.class_eval do
-    def call(*args, &block)
-      if block
-        # Use current context to track nested context if available
-        context = MetadataContext.current
-        if context
-          context.with_nested(name) do
-            original_call(*args, &block)
-          end
-        else
-          original_call(*args, &block)
-        end
-      else
-        original_call(*args)
-      end
-    end
-  end
-end
-
-module Tidewave
+class Tidewave
   class Railtie < Rails::Railtie
     config.tidewave = Tidewave::Configuration.new()
 
@@ -40,10 +14,21 @@ module Tidewave
         raise "For security reasons, Tidewave is only supported in environments where config.enable_reloading is true (typically development)"
       end
 
+      tidewave_config = app.config.tidewave
+
       app.config.middleware.insert_after(
         ActionDispatch::Callbacks,
-        Tidewave::Middleware,
-        app.config.tidewave
+        Tidewave,
+        allow_remote_access: tidewave_config.allow_remote_access,
+        client_url: tidewave_config.client_url,
+        framework_type: "rails",
+        project_name: app.class.module_parent.name,
+        team: tidewave_config.team,
+        logger: tidewave_config.logger || Rails.logger,
+        root: Rails.root,
+        log_file: Rails.root.join("log", "#{Rails.env}.log"),
+        orm_adapter: tidewave_config.preferred_orm,
+        before_reload: -> { app.eager_load! }
       )
 
       app.config.after_initialize do

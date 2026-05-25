@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require "timeout"
 require "json"
+require "stringio"
+require "timeout"
 
-class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
-  tool_name "project_eval"
-  description <<~DESCRIPTION
+class Tidewave::Tools::ProjectEval < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Evaluates Ruby code in the context of the project.
 
     The current Ruby version is: #{RUBY_VERSION}
@@ -16,20 +16,44 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
     output. DO NOT use shell tools to evaluate Ruby code.
   DESCRIPTION
 
-  arguments do
-    required(:code).filled(:string).description("The Ruby code to evaluate")
-    optional(:arguments).value(:array).description("The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.")
-    optional(:timeout).filled(:integer).description("The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).")
-    optional(:json).hidden().filled(:bool).description("Whether to return the result as JSON with structured output containing result, success, stdout, and stderr fields. Defaults to false.")
+  DEFAULT_TIMEOUT = 30_000
+
+  def definition
+    {
+      "name" => "project_eval",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {
+          "arguments" => {
+            "description" => "The arguments to pass to evaluation. They are available inside the evaluated code as `arguments`.",
+            "items" => {},
+            "type" => "array"
+          },
+          "code" => {
+            "description" => "The Ruby code to evaluate",
+            "type" => "string",
+            "minLength" => 1
+          },
+          "timeout" => {
+            "description" => "The timeout in milliseconds. If the evaluation takes longer than this, it will be terminated. Defaults to 30000 (30 seconds).",
+            "type" => "integer",
+            "not" => {
+              "type" => "null"
+            }
+          }
+        },
+        "required" => [ "code" ]
+      }
+    }
   end
 
-  def @input_schema.json_schema
-    schema = super
-    schema[:properties][:arguments][:items] = {}
-    schema
-  end
+  def call(arguments_hash)
+    code = arguments_hash.fetch("code")
+    arguments = arguments_hash.fetch("arguments", [])
+    timeout = arguments_hash.fetch("timeout", DEFAULT_TIMEOUT)
+    json = arguments_hash.fetch("json", false)
 
-  def call(code:, arguments: [], timeout: 30_000, json: false)
     original_stdout = $stdout
     original_stderr = $stderr
 
@@ -56,14 +80,12 @@ class Tidewave::Tools::ProjectEval < Tidewave::Tools::Base
 
       if json
         JSON.generate({
-          result: result,
-          success: success,
-          stdout: stdout,
-          stderr: stderr
+          "result" => result,
+          "success" => success,
+          "stdout" => stdout,
+          "stderr" => stderr
         })
       elsif stdout.empty? && stderr.empty?
-        # We explicitly call to_s so the result is not accidentally
-        # parsed as a JSON response by FastMCP.
         result.to_s
       else
         <<~OUTPUT

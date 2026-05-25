@@ -11,11 +11,12 @@ gem "rubocop-rails-omakase", require: false
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"
 
-gem "sqlite3", "2.7.3"
+gem "sqlite3", "~> 2.7.4"
 
 group :development, :test do
-  gem "rspec-rails"
   gem "pry"
   gem "appraisal"
+  gem "railties", ">= 7.1.0"
+  gem "activerecord", ">= 7.1.0"
   gem "sequel"
 end

@@ -1,23 +1,43 @@
 # frozen_string_literal: true
 
-class Tidewave::Tools::GetModels < Tidewave::Tools::Base
-  tool_name "get_models"
-  description <<~DESCRIPTION
+require "pathname"
+
+class Tidewave::Tools::GetModels < Tidewave::Tool
+  DESCRIPTION = <<~DESCRIPTION.freeze
     Returns a list of all database-backed models in the application.
   DESCRIPTION
 
-  def call
-    # Ensure all models are loaded
-    Rails.application.eager_load!
+  def initialize(options = {})
+    @root = options[:root] ? Pathname.new(options[:root].to_s) : Pathname.pwd
+    @database_adapter = Tidewave::DatabaseAdapter.for(options[:orm_adapter]) if options[:orm_adapter]
+    @before_reload = options[:before_reload]
+  end
 
-    # Use adapter to get models (encapsulates ORM-specific logic)
-    models = Tidewave::DatabaseAdapter.current.get_models
+  def definition
+    return nil unless @database_adapter
+
+    {
+      "name" => "get_models",
+      "description" => DESCRIPTION,
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {}
+      }
+    }
+  end
+
+  def call(_arguments)
+    @before_reload&.call
+
+    models = @database_adapter.get_models
 
     models.map do |model|
+      display_name = model.name || model.to_s
+
       if location = get_relative_source_location(model.name)
-        "* #{model.name} at #{location}"
+        "* #{display_name} at #{location}"
       else
-        "* #{model.name}"
+        "* #{display_name}"
       end
     end.join("\n")
   end
@@ -25,16 +45,15 @@ class Tidewave::Tools::GetModels < Tidewave::Tools::Base
   private
 
   def get_relative_source_location(model_name)
+    return nil if model_name.nil? || model_name.empty?
+
     source_location = Object.const_source_location(model_name)
-    return nil if source_location.blank?
+    return nil unless source_location
 
     file_path, line_number = source_location
-    begin
-      relative_path = Pathname.new(file_path).relative_path_from(Rails.root)
-      "#{relative_path}:#{line_number}"
-    rescue ArgumentError
-      # If the path cannot be made relative, return the absolute path
-      "#{file_path}:#{line_number}"
-    end
+    relative_path = Pathname.new(file_path).relative_path_from(@root)
+    "#{relative_path}:#{line_number}"
+  rescue ArgumentError
+    "#{file_path}:#{line_number}"
   end
 end

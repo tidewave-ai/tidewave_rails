@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
-module Tidewave
+class Tidewave
   VERSION = "0.4.2"
 end

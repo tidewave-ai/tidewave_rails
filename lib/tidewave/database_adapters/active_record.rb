@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Tidewave
+class Tidewave
   module DatabaseAdapters
     class ActiveRecord < DatabaseAdapter
       RESULT_LIMIT = 50
@@ -21,18 +21,12 @@ module Tidewave
           rows: result.rows.first(RESULT_LIMIT),
           row_count: result.rows.length,
           adapter: conn.adapter_name,
-          database: database_name
+          database: conn.pool.db_config.database
         }
       end
 
       def get_models
         ::ActiveRecord::Base.descendants
-      end
-
-      private
-
-      def database_name
-        Rails.configuration.database_configuration.dig(Rails.env, "database")
       end
     end
   end

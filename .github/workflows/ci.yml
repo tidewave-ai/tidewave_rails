@@ -24,7 +24,17 @@ jobs:
         run: bundle exec appraisal install
 
       - name: Run appraisal
-        run: bundle exec appraisal ${{ matrix.appraisal }} rspec
+        run: bundle exec appraisal ${{ matrix.appraisal }} ruby -Itest test/all_test.rb
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby 3.3.0
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.0
+          bundler-cache: true
 
       - name: Lint code for consistent style
         run: bundle exec rubocop
