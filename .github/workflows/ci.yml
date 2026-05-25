@@ -12,19 +12,18 @@ jobs:
       matrix:
         ruby-version: [3.2.0, 3.3.0]
         appraisal: ["rails_7.1", "rails_7.2", "rails_8.0"]
+    env:
+      BUNDLE_GEMFILE: gemfiles/${{ matrix.appraisal }}.gemfile
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby ${{ matrix.ruby-version }}
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby-version }}
-          bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+          bundler-cache: true # installs and caches the appraisal Gemfile selected via BUNDLE_GEMFILE
 
-      - name: Install appraisal dependencies
-        run: bundle check --gemfile="gemfiles/${{ matrix.appraisal }}.gemfile" || bundle install --gemfile="gemfiles/${{ matrix.appraisal }}.gemfile" --retry 1
-
-      - name: Run appraisal
-        run: bundle exec appraisal ${{ matrix.appraisal }} ruby -Itest test/all_test.rb
+      - name: Run tests
+        run: bundle exec ruby -Itest test/all_test.rb
 
   lint:
     runs-on: ubuntu-latest
