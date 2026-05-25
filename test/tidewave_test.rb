@@ -159,7 +159,7 @@ class TidewaveTest < Minitest::Test
 
   def test_logs_security_rejections
     logger = Minitest::Mock.new
-    logger.expect(:warn, nil, [Tidewave::INVALID_IP])
+    logger.expect(:warn, nil, [ Tidewave::INVALID_IP ])
     app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app", logger: logger)
 
     status, _headers, _body = perform_request(app, path: "/tidewave/config", remote_addr: "192.168.1.100")

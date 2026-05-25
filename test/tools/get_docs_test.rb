@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class TidewaveGetDocsTestModule
+class TidewaveGetDocsTestModule # rubocop:disable Layout/LeadingCommentSpace
   # This is a documented method
   # It does something important
   def self.documented_method
@@ -43,7 +43,7 @@ class TidewaveGetDocsTestModule
   def mixed_comment_styles
     "mixed"
   end
-end
+end # rubocop:enable Layout/LeadingCommentSpace
 
 class TidewaveGetDocsTest < Minitest::Test
   def setup

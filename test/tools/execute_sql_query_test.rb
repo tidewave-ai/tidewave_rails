@@ -3,7 +3,6 @@
 require "test_helper"
 
 class TidewaveExecuteSqlQueryTest < TidewaveActiveRecordTestCase
-
   def test_validate_and_call_returns_adapter_result
     tool = Tidewave::Tools::ExecuteSqlQuery.new(orm_adapter: :active_record)
     result = tool.validate_and_call({ "query" => "SELECT 1 as id, 'test' as name" })
