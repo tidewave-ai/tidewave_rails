@@ -15,6 +15,7 @@ end
 class TidewaveGetModelsTest < TidewaveActiveRecordTestCase
   def setup
     super
+    connection = ActiveRecord::Base.connection
     @users_table = "get_models_users"
     @posts_table = "get_models_posts"
     @comments_table = "get_models_comments"
@@ -26,9 +27,9 @@ class TidewaveGetModelsTest < TidewaveActiveRecordTestCase
     TidewaveGetModelsPost.reset_column_information
     TidewaveGetModelsComment.reset_column_information
 
-    ActiveRecord::Base.connection.create_table(@users_table) { |table| table.string :name }
-    ActiveRecord::Base.connection.create_table(@posts_table) { |table| table.string :title }
-    ActiveRecord::Base.connection.create_table(@comments_table) { |table| table.string :body }
+    connection.create_table(@users_table) { |table| table.string :name } unless connection.table_exists?(@users_table)
+    connection.create_table(@posts_table) { |table| table.string :title } unless connection.table_exists?(@posts_table)
+    connection.create_table(@comments_table) { |table| table.string :body } unless connection.table_exists?(@comments_table)
   end
 
   def test_validate_and_call_returns_models_with_source_locations
@@ -71,5 +72,20 @@ class TidewaveGetModelsTest < TidewaveActiveRecordTestCase
     tool = Tidewave::Tools::GetModels.new(root: Pathname.pwd)
 
     assert_nil tool.definition
+  end
+
+  def test_definition_uses_a_valid_empty_object_input_schema
+    tool = Tidewave::Tools::GetModels.new(
+      root: Pathname.pwd,
+      orm_adapter: :active_record
+    )
+
+    assert_equal(
+      {
+        "type" => "object",
+        "properties" => {}
+      },
+      tool.definition.fetch("inputSchema")
+    )
   end
 end

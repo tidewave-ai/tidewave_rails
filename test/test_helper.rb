@@ -36,47 +36,11 @@ end
 
 TidewaveRailtieTestApp::Application.initialize! unless TidewaveRailtieTestApp::Application.initialized?
 Rails.backtrace_cleaner.remove_silencers!
+ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
+Sequel::Model.db = Sequel.sqlite
 
-class TidewaveDatabaseTestCase < Minitest::Test
-  def before_setup
-    super
-    disconnect_test_database
-  end
-
-  def after_teardown
-    disconnect_test_database
-  ensure
-    super
-  end
-
-  private
-
-  def disconnect_test_database
-    ActiveRecord::Base.connection_pool.disconnect! if ActiveRecord::Base.connected?
-  rescue ActiveRecord::ConnectionNotEstablished
-  ensure
-    disconnect_sequel_database
-  end
-
-  def disconnect_sequel_database
-    db = Sequel::Model.db
-    db.disconnect if db
-  rescue Sequel::Error
-  ensure
-    Sequel::Model.instance_variable_set(:@db, nil)
-  end
+class TidewaveActiveRecordTestCase < Minitest::Test
 end
 
-class TidewaveActiveRecordTestCase < TidewaveDatabaseTestCase
-  def before_setup
-    super
-    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
-  end
-end
-
-class TidewaveSequelTestCase < TidewaveDatabaseTestCase
-  def before_setup
-    super
-    Sequel::Model.db = Sequel.sqlite
-  end
+class TidewaveSequelTestCase < Minitest::Test
 end

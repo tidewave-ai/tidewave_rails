@@ -19,7 +19,10 @@ class Tidewave::Tools::GetModels < Tidewave::Tool
     {
       "name" => "get_models",
       "description" => DESCRIPTION,
-      "inputSchema" => nil
+      "inputSchema" => {
+        "type" => "object",
+        "properties" => {}
+      }
     }
   end
 

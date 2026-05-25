@@ -11,16 +11,19 @@ class TidewaveDatabaseAdaptersSequelTest < TidewaveSequelTestCase
     @users_table = :sequel_users
     @posts_table = :sequel_posts
 
-    @db.create_table(@users_table) do
+    @db.create_table?(@users_table) do
       primary_key :id
       String :name
     end
 
-    @db.create_table(@posts_table) do
+    @db.create_table?(@posts_table) do
       primary_key :id
       String :title
       String :content
     end
+
+    @db[@users_table].delete
+    @db[@posts_table].delete
 
     @db[@users_table].insert(id: 1, name: "test")
     @db[@users_table].insert(id: 2, name: "user2")
