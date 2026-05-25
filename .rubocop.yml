@@ -5,6 +5,10 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 Style/FrozenStringLiteralComment:
   Enabled: true
 
+Layout/LeadingCommentSpace:
+  Exclude:
+    - test/tools/get_docs_test.rb
+
 AllCops:
   Exclude:
     - gemfiles/*
