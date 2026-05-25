@@ -3,7 +3,6 @@ PATH
   specs:
     tidewave (0.4.2)
       rack (>= 2.0)
-      rails (>= 7.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -272,9 +271,11 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  activerecord (>= 7.1.0)
   appraisal
   pry
   rails (~> 7.1.0)
+  railties (>= 7.1.0)
   rubocop-rails-omakase
   sequel
   sqlite3 (= 2.7.3)

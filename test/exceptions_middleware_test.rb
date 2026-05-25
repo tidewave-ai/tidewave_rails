@@ -6,12 +6,6 @@ require "test_helper"
 require "tidewave/exceptions_middleware"
 
 class TidewaveExceptionsMiddlewareTest < Minitest::Test
-  def setup
-    Rails.backtrace_cleaner = Object.new
-    Rails.logger = Object.new
-    Rails.logger.define_singleton_method(:error) { |_message| nil }
-  end
-
   def test_call_appends_exception_information
     exception = RuntimeError.new("Test error message")
     exception.set_backtrace([
@@ -24,8 +18,6 @@ class TidewaveExceptionsMiddlewareTest < Minitest::Test
       request.set_header("tidewave.exception", exception)
       [ 200, { "Content-Type" => "text/html" }, [ "<html><body><h1>Error Page</h1></body></html>" ] ]
     end
-
-    Rails.backtrace_cleaner.define_singleton_method(:clean) { |_backtrace| exception.backtrace }
 
     status, _headers, body = perform_request(
       Tidewave::ExceptionsMiddleware.new(app),
@@ -47,8 +39,6 @@ class TidewaveExceptionsMiddlewareTest < Minitest::Test
       ActionDispatch::Request.new(env).set_header("tidewave.exception", exception)
       [ 200, { "Content-Type" => "text/html" }, [ "<html><body><h1>Error Page</h1></body></html>" ] ]
     end
-
-    Rails.backtrace_cleaner.define_singleton_method(:clean) { |_backtrace| [] }
 
     status, _headers, body = perform_request(Tidewave::ExceptionsMiddleware.new(app))
 

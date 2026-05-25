@@ -1,27 +1,16 @@
 # frozen_string_literal: true
 
-require "active_record"
 require "test_helper"
 require "tidewave/database_adapters/active_record"
 
-class TidewaveDatabaseAdaptersActiveRecordTest < Minitest::Test
-  Result = Struct.new(:columns, :rows)
-
+class TidewaveDatabaseAdaptersActiveRecordTest < TidewaveActiveRecordTestCase
   def setup
+    super
     @adapter = Tidewave::DatabaseAdapters::ActiveRecord.new
-    Rails.env = "test"
-    Rails.configuration = Struct.new(:database_configuration).new({
-      "test" => { "database" => ":memory:" }
-    })
   end
 
   def test_execute_query_formats_results_without_arguments
-    result = Result.new([ "id", "name" ], [ [ 1, "test" ] ])
-    connection = build_connection(result)
-
-    response = with_connection(connection) do
-      @adapter.execute_query("SELECT 1 as id, 'test' as name")
-    end
+    response = @adapter.execute_query("SELECT 1 as id, 'test' as name")
 
     assert_equal [ "id", "name" ], response[:columns]
     assert_equal [ [ 1, "test" ] ], response[:rows]
@@ -31,27 +20,25 @@ class TidewaveDatabaseAdaptersActiveRecordTest < Minitest::Test
   end
 
   def test_execute_query_passes_arguments
-    result = Result.new([ "id", "name" ], [ [ 42, "dynamic" ] ])
-    captured_args = nil
-    connection = build_connection(result) { |args| captured_args = args }
+    response = @adapter.execute_query("SELECT ? as id, ? as name", [ 42, "dynamic" ])
 
-    response = with_connection(connection) do
-      @adapter.execute_query("SELECT ? as id, ? as name", [ 42, "dynamic" ])
-    end
-
-    assert_equal [ "SELECT ? as id, ? as name", "SQL", [ 42, "dynamic" ] ], captured_args
     assert_equal [ [ 42, "dynamic" ] ], response[:rows]
     assert_equal 1, response[:row_count]
   end
 
   def test_execute_query_limits_rows_to_fifty
-    rows = (1..60).map { |index| [ index, "Row #{index}" ] }
-    result = Result.new([ "id", "name" ], rows)
-    connection = build_connection(result)
+    rows_table = "active_record_rows"
 
-    response = with_connection(connection) do
-      @adapter.execute_query("SELECT * FROM rows")
+    ActiveRecord::Base.connection.create_table(rows_table) do |table|
+      table.integer :number
+      table.string :name
     end
+
+    60.times do |index|
+      ActiveRecord::Base.connection.execute("INSERT INTO #{rows_table} (number, name) VALUES (#{index + 1}, 'Row #{index + 1}')")
+    end
+
+    response = @adapter.execute_query("SELECT number, name FROM #{rows_table} ORDER BY number")
 
     assert_equal 60, response[:row_count]
     assert_equal 50, response[:rows].length
@@ -60,33 +47,8 @@ class TidewaveDatabaseAdaptersActiveRecordTest < Minitest::Test
   end
 
   def test_execute_query_reraises_adapter_errors
-    error = ActiveRecord::StatementInvalid.new("INVALID SQL SYNTAX")
-    connection = Object.new
-    connection.define_singleton_method(:adapter_name) { "SQLite" }
-    connection.define_singleton_method(:exec_query) { |_query, *_args| raise error }
-
-    raised = assert_raises(ActiveRecord::StatementInvalid) do
-      with_connection(connection) do
-        @adapter.execute_query("INVALID SQL SYNTAX")
-      end
+    assert_raises(ActiveRecord::StatementInvalid) do
+      @adapter.execute_query("INVALID SQL SYNTAX")
     end
-
-    assert_same error, raised
-  end
-
-  private
-
-  def build_connection(result)
-    connection = Object.new
-    connection.define_singleton_method(:adapter_name) { "SQLite" }
-    connection.define_singleton_method(:exec_query) do |*args|
-      yield(args) if block_given?
-      result
-    end
-    connection
-  end
-
-  def with_connection(connection, &block)
-    ActiveRecord::Base.stub(:connection, connection, &block)
   end
 end

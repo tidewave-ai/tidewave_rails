@@ -128,6 +128,7 @@ class Tidewave
     {
       "project_name" => @options[:project_name],
       "framework_type" => @options[:framework_type],
+      "orm_adapter" => @options[:orm_adapter],
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION
     }

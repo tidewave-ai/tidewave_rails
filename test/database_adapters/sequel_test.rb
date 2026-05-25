@@ -1,49 +1,37 @@
 # frozen_string_literal: true
 
-require "sequel"
 require "test_helper"
 require "tidewave/database_adapters/sequel"
 
-class TidewaveDatabaseAdaptersSequelTest < Minitest::Test
+class TidewaveDatabaseAdaptersSequelTest < TidewaveSequelTestCase
   def setup
-    @original_db = Sequel::Model.db
-    @had_original_db = true
-  rescue Sequel::Error
-    @original_db = nil
-    @had_original_db = false
-  ensure
-    @db = Sequel.sqlite
-    Sequel::Model.db = @db
+    super
+    @db = Sequel::Model.db
     @adapter = Tidewave::DatabaseAdapters::Sequel.new
+    @users_table = :sequel_users
+    @posts_table = :sequel_posts
 
-    @db.create_table(:users) do
+    @db.create_table(@users_table) do
       primary_key :id
       String :name
     end
 
-    @db.create_table(:posts) do
+    @db.create_table(@posts_table) do
       primary_key :id
       String :title
       String :content
     end
 
-    @db[:users].insert(id: 1, name: "test")
-    @db[:users].insert(id: 2, name: "user2")
+    @db[@users_table].insert(id: 1, name: "test")
+    @db[@users_table].insert(id: 2, name: "user2")
 
     60.times do |index|
-      @db[:posts].insert(id: index + 1, title: "Post #{index + 1}", content: "Content #{index + 1}")
+      @db[@posts_table].insert(id: index + 1, title: "Post #{index + 1}", content: "Content #{index + 1}")
     end
-  end
-
-  def teardown
-    Sequel::Model.db = @original_db if @had_original_db
-    @db.disconnect
   end
 
   def test_execute_query_formats_results_without_arguments
-    response = with_database do
-      @adapter.execute_query("SELECT 1 as id, 'test' as name")
-    end
+    response = @adapter.execute_query("SELECT 1 as id, 'test' as name")
 
     assert_equal [ "id", "name" ], response[:columns]
     assert_equal [ [ 1, "test" ] ], response[:rows]
@@ -53,9 +41,7 @@ class TidewaveDatabaseAdaptersSequelTest < Minitest::Test
   end
 
   def test_execute_query_passes_arguments
-    response = with_database do
-      @adapter.execute_query("SELECT ? as id, ? as name", [ 42, "dynamic" ])
-    end
+    response = @adapter.execute_query("SELECT ? as id, ? as name", [ 42, "dynamic" ])
 
     assert_equal [ "id", "name" ], response[:columns]
     assert_equal [ [ 42, "dynamic" ] ], response[:rows]
@@ -63,9 +49,7 @@ class TidewaveDatabaseAdaptersSequelTest < Minitest::Test
   end
 
   def test_execute_query_limits_rows_to_fifty
-    response = with_database do
-      @adapter.execute_query("SELECT * FROM posts ORDER BY id")
-    end
+    response = @adapter.execute_query("SELECT * FROM #{@posts_table} ORDER BY id")
 
     assert_equal 60, response[:row_count]
     assert_equal 50, response[:rows].length
@@ -76,16 +60,12 @@ class TidewaveDatabaseAdaptersSequelTest < Minitest::Test
 
   def test_execute_query_reraises_database_errors
     assert_raises(Sequel::DatabaseError) do
-      with_database do
-        @adapter.execute_query("SELECT * FROM nonexistent_table")
-      end
+      @adapter.execute_query("SELECT * FROM nonexistent_table")
     end
   end
 
   def test_execute_query_handles_empty_results
-    response = with_database do
-      @adapter.execute_query("SELECT * FROM users WHERE id = -1")
-    end
+    response = @adapter.execute_query("SELECT * FROM #{@users_table} WHERE id = -1")
 
     assert_equal [], response[:columns]
     assert_equal [], response[:rows]
@@ -95,43 +75,29 @@ class TidewaveDatabaseAdaptersSequelTest < Minitest::Test
   end
 
   def test_get_models_filters_anonymous_models
-    account = Struct.new(:name).new("Account")
-    user = Struct.new(:name).new("User")
-    anonymous = Struct.new(:name).new("Sequel::_Model(:users)")
-
-    models = with_descendants([ account, user, anonymous ]) do
-      @adapter.get_models
+    base_model = Sequel::Model(@users_table)
+    named_model = Class.new(base_model)
+    Object.const_set(:TidewaveSequelNamedModel, named_model)
+    filtered_model = Class.new(base_model) do
+      def self.name
+        "Sequel::_Model(#{@users_table.inspect})"
+      end
     end
 
-    assert_equal [ account, user ], models
+    models = @adapter.get_models
+
+    assert_includes models, named_model
+    refute_includes models, filtered_model
+  ensure
+    Object.send(:remove_const, :TidewaveSequelNamedModel) if Object.const_defined?(:TidewaveSequelNamedModel)
   end
 
   def test_get_models_keeps_nil_names
-    named = Struct.new(:name).new("Account")
-    nil_name = Struct.new(:name).new(nil)
+    base_model = Sequel::Model(@users_table)
+    unnamed_model = Class.new(base_model)
 
-    models = with_descendants([ named, nil_name ]) do
-      @adapter.get_models
-    end
+    models = @adapter.get_models
 
-    assert_equal [ named, nil_name ], models
-  end
-
-  private
-
-  def with_database(&block)
-    block.call
-  end
-
-  def with_descendants(descendants)
-    singleton = Sequel::Model.singleton_class
-    had_original = Sequel::Model.respond_to?(:descendants)
-    original_method = Sequel::Model.method(:descendants) if had_original
-
-    singleton.define_method(:descendants) { descendants }
-    yield
-  ensure
-    singleton.remove_method(:descendants)
-    singleton.define_method(:descendants, original_method) if had_original
+    assert_includes models, unnamed_model
   end
 end

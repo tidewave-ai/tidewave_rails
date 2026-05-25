@@ -1,50 +1,62 @@
 # frozen_string_literal: true
 
+require "active_support/logger"
+require "logger"
+require "stringio"
 require "test_helper"
 require "tidewave/quiet_requests_middleware"
 
 class TidewaveQuietRequestsMiddlewareTest < Minitest::Test
-  def setup
-    @downstream_app = ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "ok" ] ] }
-    @middleware = Tidewave::QuietRequestsMiddleware.new(@downstream_app)
-  end
-
   def test_tidewave_requests_are_silenced
-    logger = Object.new
-    called = false
-    logger.define_singleton_method(:silence) do |&block|
-      called = true
-      block.call
-    end
-    Rails.logger = logger
+    io = StringIO.new
+    logger = ActiveSupport::Logger.new(io)
+    logger.level = Logger::DEBUG
 
-    status, _headers, body = perform_request("/tidewave/config")
+    status, _headers, body = with_rails_logger(logger) do
+      perform_request(Tidewave::QuietRequestsMiddleware.new(logging_app), "/tidewave/config")
+    end
 
     assert_equal 200, status
     assert_equal "ok", body
-    assert_equal true, called
+    refute_includes io.string, "request log"
   end
 
   def test_non_tidewave_requests_skip_silencing
-    logger = Object.new
-    logger.define_singleton_method(:silence) do |&block|
-      flunk "silence should not be called for non-tidewave routes"
-    end
-    Rails.logger = logger
+    io = StringIO.new
+    logger = ActiveSupport::Logger.new(io)
+    logger.level = Logger::DEBUG
 
-    status, _headers, body = perform_request("/other-route")
+    status, _headers, body = with_rails_logger(logger) do
+      perform_request(Tidewave::QuietRequestsMiddleware.new(logging_app), "/other-route")
+    end
 
     assert_equal 200, status
     assert_equal "ok", body
+    assert_includes io.string, "request log"
   end
 
   private
 
-  def perform_request(path)
-    status, headers, response = @middleware.call(Rack::MockRequest.env_for(path))
+  def logging_app
+    lambda do |_env|
+      Rails.logger.info("request log")
+      [ 200, { "Content-Type" => "text/plain" }, [ "ok" ] ]
+    end
+  end
+
+  def perform_request(app, path)
+    status, headers, response = app.call(Rack::MockRequest.env_for(path))
     body = +""
     response.each { |part| body << part }
     response.close if response.respond_to?(:close)
     [ status, headers, body ]
+  end
+
+  def with_rails_logger(logger)
+    original_logger = Rails.logger
+    Rails.logger = logger
+    yield
+  ensure
+    Rails.logger = original_logger
   end
 end

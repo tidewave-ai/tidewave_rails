@@ -31,7 +31,19 @@ class Tidewave
 
       def get_models
         # Filter out anonymous Sequel models that can't be resolved as constants
-        ::Sequel::Model.descendants.reject { |model| model.name&.start_with?("Sequel::_Model(") }
+        descendants_of(::Sequel::Model).reject { |model| model.name&.start_with?("Sequel::_Model(") }
+      end
+
+      private
+
+      def descendants_of(base)
+        if base.respond_to?(:descendants)
+          base.descendants
+        elsif base.respond_to?(:subclasses)
+          base.subclasses.flat_map { |subclass| [ subclass ] + descendants_of(subclass) }
+        else
+          []
+        end
       end
     end
   end
