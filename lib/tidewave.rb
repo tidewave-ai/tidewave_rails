@@ -236,7 +236,7 @@ class Tidewave
     tool = @tools[tool_name]
     return jsonrpc_error_response_body(request_id, -32601, "Tool '#{tool_name}' not found") if tool.nil?
 
-    result = tool.call(arguments)
+    result = tool.validate_and_call(arguments)
     jsonrpc_success_response(request_id, result)
   rescue StandardError => error
     @logger&.error("Tool execution error: #{error.message}")
