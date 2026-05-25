@@ -5,6 +5,7 @@ $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "json"
 require "logger"
 require "minitest/autorun"
+require "minitest/pride"
 require "pathname"
 require "rack/mock_request"
 require "stringio"
