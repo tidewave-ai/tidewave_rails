@@ -162,7 +162,7 @@ class Tidewave
   def valid_client_ip?(request)
     return true if @options[:allow_remote_access]
 
-    ip = request.ip
+    ip = request.get_header("REMOTE_ADDR")
     return false if ip.nil? || ip.empty?
 
     address = IPAddr.new(ip)
@@ -194,11 +194,11 @@ class Tidewave
     when "notifications/initialized", "notifications/cancelled"
       nil
     when "ping"
-      jsonrpc_success_response(request_id, {})
+      jsonrpc_success_response_body(request_id, {})
     when "initialize"
       handle_initialize(request_id, params)
     when "tools/list"
-      jsonrpc_success_response(request_id, { "tools" => tool_definitions })
+      jsonrpc_success_response_body(request_id, { "tools" => tool_definitions })
     when "tools/call"
       handle_tool_call(request_id, params)
     else
@@ -226,7 +226,7 @@ class Tidewave
       )
     end
 
-    jsonrpc_success_response(request_id, {
+    jsonrpc_success_response_body(request_id, {
       "protocolVersion" => PROTOCOL_VERSION,
       "capabilities" => { "tools" => { "listChanged" => false } },
       "serverInfo" => {
@@ -247,13 +247,13 @@ class Tidewave
     return jsonrpc_error_response_body(request_id, -32601, "Tool '#{tool_name}' not found") if tool.nil?
 
     result = tool.validate_and_call(arguments)
-    jsonrpc_success_response(request_id, tool_result(result))
+    jsonrpc_success_response_body(request_id, tool_result(result))
   rescue StandardError => error
     @logger&.error("Tool execution error: #{error.message}")
-    jsonrpc_success_response(request_id, tool_error_result("Tool execution failed: #{error.message}"))
+    jsonrpc_success_response_body(request_id, tool_error_result("Tool execution failed: #{error.message}"))
   end
 
-  def jsonrpc_success_response(request_id, result)
+  def jsonrpc_success_response_body(request_id, result)
     {
       "jsonrpc" => "2.0",
       "id" => request_id,
@@ -295,15 +295,9 @@ class Tidewave
       }
     else
       {
-        "content" => [ text_content(tool_result_text(result)) ]
+        "content" => [ text_content(result.to_s) ]
       }
     end
-  end
-
-  def tool_result_text(result)
-    return result if result.is_a?(String)
-
-    result.to_s
   end
 
   def text_content(text)

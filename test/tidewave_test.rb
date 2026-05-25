@@ -77,6 +77,20 @@ class TidewaveTest < Minitest::Test
     end
   end
 
+  def test_security_ignores_forwarded_ip_headers
+    app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app")
+
+    status, _headers, body = perform_request(
+      app,
+      path: "/tidewave/config",
+      remote_addr: "192.168.1.100",
+      forwarded_for: "127.0.0.1"
+    )
+
+    assert_equal 403, status
+    assert_includes body, "Tidewave does not accept remote connections by default"
+  end
+
   def test_config_endpoint_returns_json
     app = Tidewave.new(
       @downstream_app,
@@ -170,13 +184,14 @@ class TidewaveTest < Minitest::Test
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
       "REMOTE_ADDR" => remote_addr)
 
     env["HTTP_ORIGIN"] = origin if origin
+    env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]

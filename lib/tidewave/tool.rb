@@ -31,6 +31,10 @@ class Tidewave
         raise ArgumentError, "Invalid arguments: expected an object"
       end
 
+      # This validator intentionally enforces only a small subset of JSON Schema:
+      # `type`, `required`, and scalar `default` values. Other keywords such as
+      # `minLength`, `maxLength`, `enum`, and `pattern` remain descriptive until
+      # Tidewave grows broader schema support.
       validate_schema(arguments, definition.fetch("inputSchema", {}))
       call(arguments)
     end

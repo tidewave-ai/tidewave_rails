@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+# rubocop:disable Layout/LeadingCommentSpace
+
 require "test_helper"
 
-class TidewaveGetDocsTestModule # rubocop:disable Layout/LeadingCommentSpace
+class TidewaveGetDocsTestModule
   # This is a documented method
   # It does something important
   def self.documented_method
@@ -43,7 +45,7 @@ class TidewaveGetDocsTestModule # rubocop:disable Layout/LeadingCommentSpace
   def mixed_comment_styles
     "mixed"
   end
-end # rubocop:enable Layout/LeadingCommentSpace
+end
 
 class TidewaveGetDocsTest < Minitest::Test
   def setup
@@ -114,3 +116,5 @@ class TidewaveGetDocsTest < Minitest::Test
     assert_equal "wrong constant name 1+2", error.message
   end
 end
+
+# rubocop:enable Layout/LeadingCommentSpace

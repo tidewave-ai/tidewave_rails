@@ -68,6 +68,21 @@ class TidewaveGetModelsTest < TidewaveActiveRecordTestCase
     assert_includes result, "* TidewaveMissingSourceModel"
   end
 
+  def test_validate_and_call_handles_anonymous_models
+    anonymous_model = Class.new(ActiveRecord::Base)
+    anonymous_model.table_name = @users_table
+    anonymous_model.reset_column_information
+
+    tool = Tidewave::Tools::GetModels.new(
+      root: Pathname.pwd,
+      orm_adapter: :active_record
+    )
+
+    result = tool.validate_and_call({})
+
+    assert_includes result, "* #{anonymous_model}"
+  end
+
   def test_definition_is_nil_when_orm_adapter_is_missing
     tool = Tidewave::Tools::GetModels.new(root: Pathname.pwd)
 

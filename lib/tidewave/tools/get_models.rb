@@ -32,10 +32,12 @@ class Tidewave::Tools::GetModels < Tidewave::Tool
     models = @database_adapter.get_models
 
     models.map do |model|
+      display_name = model.name || model.to_s
+
       if location = get_relative_source_location(model.name)
-        "* #{model.name} at #{location}"
+        "* #{display_name} at #{location}"
       else
-        "* #{model.name}"
+        "* #{display_name}"
       end
     end.join("\n")
   end
@@ -43,6 +45,8 @@ class Tidewave::Tools::GetModels < Tidewave::Tool
   private
 
   def get_relative_source_location(model_name)
+    return nil if model_name.nil? || model_name.empty?
+
     source_location = Object.const_source_location(model_name)
     return nil unless source_location
 

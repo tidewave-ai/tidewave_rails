@@ -60,7 +60,8 @@ class Tidewave::Tools::GetDocs < Tidewave::Tool
       line = lines[current_line].chomp.strip
 
       if line.start_with?("#")
-        comment_lines.unshift(line.sub(/^#\s|^#/, ""))
+        comment = line.sub(/^#\s|^#/, "")
+        comment_lines.unshift(comment) unless ignorable_comment?(comment)
       elsif line.empty?
         # Skip empty lines but continue looking for comments
       else
@@ -73,5 +74,9 @@ class Tidewave::Tools::GetDocs < Tidewave::Tool
 
     return nil if comment_lines.empty?
     comment_lines.join("\n")
+  end
+
+  def ignorable_comment?(comment)
+    comment.start_with?("rubocop:")
   end
 end
