@@ -94,6 +94,18 @@ The following config is available:
 - `project_eval` - evaluates code within the Rails application itself, giving the agent
   access to your runtime, dependencies, and in-memory data
 
+> [!NOTE]
+> #### Why no tools for routes, associations, etc?
+>
+> Tidewave does not include tools for listing your routes, associations, etc. because
+> agents are better off reading their respective source files, which gives agents more
+> context and enable them to perform any necessary edit without additional tools calls.
+>
+> Instead, Tidewave aims to fill in missing gaps, such as evaluating code inside your
+> Rails app (without starting new instances) and finding source location, which can be
+> tricky, even with grepping, due to meta-programming and the different places Bundler
+> can install your dependencies.
+
 ## Acknowledgements
 
 A thank you to Yorick Jacquin for the initial version of this project.
