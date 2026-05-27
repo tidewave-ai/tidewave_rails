@@ -20,14 +20,6 @@ gem "tidewave", group: :development
 
 Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
 
-## Development
-
-Run the Minitest suite with:
-
-```shell
-bundle exec ruby -Itest test/all_test.rb
-```
-
 ## Troubleshooting
 
 ### Using multiple hosts/subdomains
@@ -109,6 +101,14 @@ The following config is available:
 ## Acknowledgements
 
 A thank you to Yorick Jacquin for the initial version of this project.
+
+## Development
+
+Run the Minitest suite with:
+
+```shell
+bundle exec ruby -Itest test/all_test.rb
+```
 
 ## License
 
