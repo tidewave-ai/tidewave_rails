@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.5.0 (2026-05-29)
+
+* Remove FastMCP as a dependency
+
 ## v0.4.2 (2026-02-05)
 
 * Return 202 responses when there is no content (fix Codex compatibility)
