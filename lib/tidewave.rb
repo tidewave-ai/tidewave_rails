@@ -167,7 +167,7 @@ class Tidewave
   end
 
   def local_port(request)
-    request.get_header("SERVER_PORT").to_i.nonzero? || request.port
+    request.get_header("SERVER_PORT").to_i.nonzero?
   end
 
   def valid_client_ip?(request)
