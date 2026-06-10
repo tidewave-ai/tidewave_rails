@@ -103,7 +103,8 @@ class TidewaveTest < Minitest::Test
       app,
       path: "/tidewave/config",
       host: "example.test:3000",
-      server_port: "4000"
+      server_port: "4000",
+      puma_socket: fake_socket(port: 5000)
     )
 
     assert_equal 200, status
@@ -116,7 +117,7 @@ class TidewaveTest < Minitest::Test
     assert_equal Tidewave::VERSION, payload["tidewave_version"]
     assert_equal({ "id" => "dashbit" }, payload["team"])
     assert_equal "demo-app", payload["project_name"]
-    assert_equal 4000, payload["local_port"]
+    assert_equal 5000, payload["local_port"]
   end
 
   def test_config_endpoint_includes_orm_adapter_when_configured
@@ -130,6 +131,28 @@ class TidewaveTest < Minitest::Test
     _status, _headers, body = perform_request(app, path: "/tidewave/config")
 
     assert_equal "sequel", JSON.parse(body)["orm_adapter"]
+  end
+
+  def test_config_endpoint_returns_nil_local_port_for_missing_invalid_or_zero_puma_socket_port
+    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "demo-app")
+
+    [ nil, fake_socket(port: nil, ip: false) ].each do |puma_socket|
+      _status, _headers, body = perform_request(app, path: "/tidewave/config", puma_socket: puma_socket)
+
+      assert_nil JSON.parse(body)["local_port"]
+    end
+  end
+
+  def test_config_endpoint_reads_local_port_from_socket_io_fallback
+    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(
+      app,
+      path: "/tidewave/config",
+      puma_socket: fake_socket(port: 5001, direct_local_address: false)
+    )
+
+    assert_equal 5001, JSON.parse(body)["local_port"]
   end
 
   def test_project_name_is_required
@@ -205,7 +228,7 @@ class TidewaveTest < Minitest::Test
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
@@ -215,9 +238,40 @@ class TidewaveTest < Minitest::Test
     env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
     env["HTTP_HOST"] = host if host
     env["SERVER_PORT"] = server_port if server_port
+    env["puma.socket"] = puma_socket if puma_socket
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]
+  end
+
+  def fake_socket(port:, ip: true, direct_local_address: true)
+    addr = Struct.new(:port, :ip) do
+      def ip?
+        ip
+      end
+
+      def ip_port
+        port
+      end
+    end.new(port, ip)
+
+    if direct_local_address
+      Struct.new(:addr) do
+        def local_address
+          addr
+        end
+      end.new(addr)
+    else
+      Struct.new(:addr) do
+        def to_io
+          Struct.new(:addr) do
+            def local_address
+              addr
+            end
+          end.new(addr)
+        end
+      end.new(addr)
+    end
   end
 
   def collect_body(response)

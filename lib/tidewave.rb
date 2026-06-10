@@ -167,7 +167,11 @@ class Tidewave
   end
 
   def local_port(request)
-    request.get_header("SERVER_PORT").to_i.nonzero?
+    sock = request.env["puma.socket"]
+    return unless sock
+
+    addr = sock.respond_to?(:local_address) ? sock.local_address : sock.to_io.local_address
+    addr.ip? ? addr.ip_port : nil
   end
 
   def valid_client_ip?(request)
