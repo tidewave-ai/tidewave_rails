@@ -60,7 +60,9 @@ class Tidewave
 
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
-      return forbidden(INVALID_ORIGIN) if request.get_header("HTTP_ORIGIN") && path != [ TIDEWAVE_ROUTE ]
+      if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
+        return forbidden(INVALID_ORIGIN)
+      end
 
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
@@ -102,8 +104,8 @@ class Tidewave
     [ 200, response_headers("text/html", body), [ body ] ]
   end
 
-  def config_endpoint(_request)
-    json_response(config_data)
+  def config_endpoint(request)
+    json_response(config_data(request), headers: { "Access-Control-Allow-Origin" => "*" })
   end
 
   def mcp_endpoint(request)
@@ -124,19 +126,20 @@ class Tidewave
     jsonrpc_error_response(nil, -32603, "Internal error")
   end
 
-  def config_data
+  def config_data(request)
     {
       "project_name" => @options[:project_name],
       "framework_type" => @options[:framework_type],
       "orm_adapter" => @options[:orm_adapter],
       "team" => @options[:team] || {},
-      "tidewave_version" => VERSION
+      "tidewave_version" => VERSION,
+      "local_port" => local_port(request)
     }
   end
 
-  def json_response(payload, status: 200)
+  def json_response(payload, status: 200, headers: {})
     body = JSON.generate(payload)
-    [ status, response_headers("application/json", body), [ body ] ]
+    [ status, response_headers("application/json", body).merge(headers), [ body ] ]
   end
 
   def forbidden(message)
@@ -157,6 +160,14 @@ class Tidewave
       "Content-Type" => content_type,
       "Content-Length" => body.bytesize.to_s
     }
+  end
+
+  def origin_allowed_path?(path)
+    path == [ TIDEWAVE_ROUTE ] || path == [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+  end
+
+  def local_port(request)
+    request.get_header("SERVER_PORT").to_i.nonzero? || request.port
   end
 
   def valid_client_ip?(request)

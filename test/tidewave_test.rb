@@ -99,10 +99,16 @@ class TidewaveTest < Minitest::Test
       team: { id: "dashbit" }
     )
 
-    status, headers, body = perform_request(app, path: "/tidewave/config")
+    status, headers, body = perform_request(
+      app,
+      path: "/tidewave/config",
+      host: "example.test:3000",
+      server_port: "4000"
+    )
 
     assert_equal 200, status
     assert_equal "application/json", headers["Content-Type"]
+    assert_equal "*", headers["Access-Control-Allow-Origin"]
 
     payload = JSON.parse(body)
     assert_equal "rack", payload["framework_type"]
@@ -110,6 +116,7 @@ class TidewaveTest < Minitest::Test
     assert_equal Tidewave::VERSION, payload["tidewave_version"]
     assert_equal({ "id" => "dashbit" }, payload["team"])
     assert_equal "demo-app", payload["project_name"]
+    assert_equal 4000, payload["local_port"]
   end
 
   def test_config_endpoint_includes_orm_adapter_when_configured
@@ -140,12 +147,26 @@ class TidewaveTest < Minitest::Test
     assert_equal "Not Found", body
   end
 
-  def test_non_root_tidewave_routes_refuse_requests_with_origin_header
+  def test_mcp_and_unmatched_tidewave_routes_refuse_requests_with_origin_header
     status, _headers, _body = perform_request(@app, path: "/tidewave/other", origin: "http://localhost:4001")
     assert_equal 403, status
 
-    status, _headers, _body = perform_request(@app, path: "/tidewave/config", origin: "http://localhost:4000")
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      origin: "http://localhost:4001",
+      body: JSON.generate({ jsonrpc: "2.0", method: "ping", id: 1 })
+    )
     assert_equal 403, status
+  end
+
+  def test_config_allows_requests_with_origin_header_and_cors
+    status, headers, body = perform_request(@app, path: "/tidewave/config", origin: "http://localhost:4001")
+
+    assert_equal 200, status
+    assert_equal "*", headers["Access-Control-Allow-Origin"]
+    assert_includes body, "\"tidewave_version\""
   end
 
   def test_root_allows_any_origin
@@ -184,7 +205,7 @@ class TidewaveTest < Minitest::Test
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
@@ -192,6 +213,8 @@ class TidewaveTest < Minitest::Test
 
     env["HTTP_ORIGIN"] = origin if origin
     env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
+    env["HTTP_HOST"] = host if host
+    env["SERVER_PORT"] = server_port if server_port
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]
