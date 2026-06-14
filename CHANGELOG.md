@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.5.1 (2026-06-14)
+
+* Improve out-of-the-box experience for remote access (which remains opt-in)
+
 ## v0.5.0 (2026-05-29)
 
 * Remove FastMCP as a dependency
