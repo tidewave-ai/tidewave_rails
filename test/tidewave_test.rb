@@ -7,7 +7,7 @@ class TidewaveTest < Minitest::Test
     @downstream_calls = []
     @downstream_app = lambda do |env|
       @downstream_calls << env
-      [ 200, { "Content-Type" => "text/plain", "X-Frame-Options" => "DENY" }, [ "demo response" ] ]
+      [ 200, { "content-type" => "text/plain", "x-frame-options" => "DENY" }, [ "demo response" ] ]
     end
 
     @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
@@ -17,7 +17,7 @@ class TidewaveTest < Minitest::Test
     status, headers, body = perform_request(@app, path: "/")
 
     assert_equal 200, status
-    assert_equal "text/plain", headers["Content-Type"]
+    assert_equal "text/plain", headers["content-type"]
     assert_equal "demo response", body
     assert_equal 1, @downstream_calls.length
   end
@@ -26,14 +26,14 @@ class TidewaveTest < Minitest::Test
     status, headers, _body = perform_request(@app, path: "/")
 
     assert_equal 200, status
-    assert_nil headers["X-Frame-Options"]
+    assert_nil headers["x-frame-options"]
   end
 
   def test_home_route_returns_html
     status, headers, body = perform_request(@app, path: "/tidewave")
 
     assert_equal 200, status
-    assert_equal "text/html", headers["Content-Type"]
+    assert_equal "text/html", headers["content-type"]
     assert_includes body, "https://tidewave.ai/tc/tc.js"
     refute_includes body.downcase, "tidewave:config"
   end
@@ -61,7 +61,7 @@ class TidewaveTest < Minitest::Test
     status, headers, body = perform_request(app, path: "/tidewave/config", remote_addr: "192.168.1.100")
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
+    assert_equal "application/json", headers["content-type"]
     assert_includes body, "\"tidewave_version\""
   end
 
@@ -72,7 +72,7 @@ class TidewaveTest < Minitest::Test
       status, headers, body = perform_request(app, path: "/tidewave/config", remote_addr: ip)
 
       assert_equal 200, status, "expected #{ip} to be accepted as a loopback address"
-      assert_equal "application/json", headers["Content-Type"]
+      assert_equal "application/json", headers["content-type"]
       assert_includes body, "\"tidewave_version\""
     end
   end
@@ -108,8 +108,8 @@ class TidewaveTest < Minitest::Test
     )
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
-    assert_equal "*", headers["Access-Control-Allow-Origin"]
+    assert_equal "application/json", headers["content-type"]
+    assert_equal "*", headers["access-control-allow-origin"]
 
     payload = JSON.parse(body)
     assert_equal "rack", payload["framework_type"]
@@ -188,7 +188,7 @@ class TidewaveTest < Minitest::Test
     status, headers, body = perform_request(@app, path: "/tidewave/config", origin: "http://localhost:4001")
 
     assert_equal 200, status
-    assert_equal "*", headers["Access-Control-Allow-Origin"]
+    assert_equal "*", headers["access-control-allow-origin"]
     assert_includes body, "\"tidewave_version\""
   end
 
@@ -204,7 +204,7 @@ class TidewaveTest < Minitest::Test
     status, headers, body = perform_request(@app, path: "/tidewave/config")
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
+    assert_equal "application/json", headers["content-type"]
     assert_includes body, "\"tidewave_version\""
   end
 

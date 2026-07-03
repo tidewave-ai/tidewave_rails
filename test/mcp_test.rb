@@ -25,7 +25,7 @@ class TidewaveMcpTest < Minitest::Test
     )
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
+    assert_equal "application/json", headers["content-type"]
 
     payload = JSON.parse(body)
     assert_equal "2.0", payload["jsonrpc"]
@@ -37,14 +37,14 @@ class TidewaveMcpTest < Minitest::Test
     status, headers, _body = perform_request(@app, path: "/tidewave/mcp", method: "GET")
 
     assert_equal 405, status
-    assert_equal "POST", headers["Allow"]
+    assert_equal "POST", headers["allow"]
   end
 
   def test_delete_mcp_returns_method_not_allowed
     status, headers, _body = perform_request(@app, path: "/tidewave/mcp", method: "DELETE")
 
     assert_equal 405, status
-    assert_equal "POST", headers["Allow"]
+    assert_equal "POST", headers["allow"]
   end
 
   def test_empty_request_body_returns_parse_error

@@ -85,7 +85,7 @@ class Tidewave
 
   def strip_x_frame_options(response)
     status, headers, body = response
-    headers.delete("X-Frame-Options")
+    headers.delete("x-frame-options")
     [ status, headers, body ]
   end
 
@@ -107,7 +107,7 @@ class Tidewave
   end
 
   def config_endpoint(request)
-    json_response(config_data(request), headers: { "Access-Control-Allow-Origin" => "*" })
+    json_response(config_data(request), headers: { "access-control-allow-origin" => "*" })
   end
 
   def mcp_endpoint(request)
@@ -174,21 +174,25 @@ class Tidewave
 
   def method_not_allowed
     status, headers, body = text_response(405, "Method Not Allowed")
-    [ status, headers.merge("Allow" => "POST"), body ]
+    [ status, headers.merge("allow" => "POST"), body ]
   end
 
   def accepted_response
-    [ 202, { "Content-Length" => "0" }, [] ]
+    [ 202, { "content-length" => "0" }, [] ]
   end
 
   def text_response(status, message)
     [ status, response_headers("text/plain; charset=utf-8", message), [ message ] ]
   end
 
+  # Rack 3 requires response header keys to be lowercase. Capitalized keys break
+  # case-sensitive middleware such as Rack::Deflater, which strips "content-length"
+  # before gzipping; a surviving "Content-Length" leaves a stale (uncompressed)
+  # length on the compressed body and hangs spec-compliant HTTP clients.
   def response_headers(content_type, body)
     {
-      "Content-Type" => content_type,
-      "Content-Length" => body.bytesize.to_s
+      "content-type" => content_type,
+      "content-length" => body.bytesize.to_s
     }
   end
 
