@@ -1,16 +1,22 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "tmpdir"
 
 class TidewaveTest < Minitest::Test
   def setup
+    @tmpdir = Dir.mktmpdir("tidewave-test")
     @downstream_calls = []
     @downstream_app = lambda do |env|
       @downstream_calls << env
       [ 200, { "content-type" => "text/plain", "x-frame-options" => "DENY" }, [ "demo response" ] ]
     end
 
-    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
+    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app", root: @tmpdir)
+  end
+
+  def teardown
+    FileUtils.remove_entry(@tmpdir) if @tmpdir && File.directory?(@tmpdir)
   end
 
   def test_non_tidewave_route_passes_through
@@ -118,6 +124,20 @@ class TidewaveTest < Minitest::Test
     assert_equal({ "id" => "dashbit" }, payload["team"])
     assert_equal "demo-app", payload["project_name"]
     assert_equal 5000, payload["local_port"]
+    assert_equal "tmp", payload["tmp_dir"]
+  end
+
+  def test_config_endpoint_returns_configured_tmp_dir
+    app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      project_name: "demo-app",
+      tmp_dir: "custom-tmp"
+    )
+
+    _status, _headers, body = perform_request(app, path: "/tidewave/config")
+
+    assert_equal "custom-tmp", JSON.parse(body)["tmp_dir"]
   end
 
   def test_config_endpoint_includes_orm_adapter_when_configured
@@ -200,6 +220,92 @@ class TidewaveTest < Minitest::Test
     assert_equal 200, status
   end
 
+  def test_upload_endpoint_accepts_valid_screenshot_from_same_origin
+    status, headers, body = perform_multipart_upload(
+      @app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: "PNGDATA",
+      origin: "http://example.test:3000",
+      host: "example.test:3000"
+    )
+
+    expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
+
+    assert_equal 200, status
+    assert_equal "application/json", headers["Content-Type"]
+    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal "PNGDATA", File.binread(expected_path)
+  end
+
+  def test_upload_endpoint_accepts_valid_recording_without_origin
+    status, _headers, body = perform_multipart_upload(
+      @app,
+      type: "recording",
+      filename: "capture.webm",
+      content_type: "video/webm;codecs=vp9",
+      content: "WEBMDATA"
+    )
+
+    expected_path = File.join(@tmpdir, "tmp", "tidewave", "recordings", "capture.webm")
+
+    assert_equal 200, status
+    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal "WEBMDATA", File.binread(expected_path)
+  end
+
+  def test_upload_endpoint_uses_configured_tmp_dir
+    app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      project_name: "test-app",
+      root: @tmpdir,
+      tmp_dir: "custom-tmp"
+    )
+
+    status, _headers, body = perform_multipart_upload(
+      app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: "PNGDATA"
+    )
+
+    expected_path = File.join(@tmpdir, "custom-tmp", "tidewave", "screenshots", "capture.png")
+
+    assert_equal 200, status
+    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal "PNGDATA", File.binread(expected_path)
+  end
+
+  def test_upload_endpoint_rejects_invalid_type_or_content_type
+    [
+      { type: "other", filename: "capture.png", content_type: "image/png" },
+      { type: "screenshot", filename: "capture.txt", content_type: "text/plain" }
+    ].each do |upload|
+      status, _headers, body = perform_multipart_upload(@app, **upload, content: "DATA")
+
+      assert_equal 400, status
+      assert_equal Tidewave::INVALID_UPLOAD, body
+    end
+  end
+
+  def test_upload_endpoint_rejects_cross_origin_requests
+    status, _headers, body = perform_multipart_upload(
+      @app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: "PNGDATA",
+      origin: "http://evil.test:3000",
+      host: "example.test:3000"
+    )
+
+    assert_equal 403, status
+    assert_equal Tidewave::INVALID_UPLOAD_ORIGIN, body
+  end
+
   def test_no_origin_header_allowed
     status, headers, body = perform_request(@app, path: "/tidewave/config")
 
@@ -216,24 +322,63 @@ class TidewaveTest < Minitest::Test
   end
 
   def test_logs_security_rejections
-    logger = Minitest::Mock.new
-    logger.expect(:warn, nil, [ Tidewave::INVALID_IP ])
+    warnings = []
+    logger = Struct.new(:warnings) do
+      def warn(message)
+        warnings << message
+      end
+    end.new(warnings)
     app = Tidewave.new(@downstream_app, allow_remote_access: false, project_name: "test-app", logger: logger)
 
     status, _headers, _body = perform_request(app, path: "/tidewave/config", remote_addr: "192.168.1.100")
 
     assert_equal 403, status
-    logger.verify
+    assert_equal [ Tidewave::INVALID_IP ], warnings
   end
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil)
+  def perform_multipart_upload(app, type:, filename:, content_type:, content:, origin: nil, host: "example.test")
+    body, request_content_type = multipart_body(
+      type: type,
+      filename: filename,
+      content_type: content_type,
+      content: content
+    )
+
+    perform_request(
+      app,
+      path: "/tidewave/upload",
+      method: "POST",
+      body: body,
+      content_type: request_content_type,
+      origin: origin,
+      host: host
+    )
+  end
+
+  def multipart_body(type:, filename:, content_type:, content:)
+    boundary = "----tidewave-test-boundary"
+    body = +""
+    body << "--#{boundary}\r\n"
+    body << "Content-Disposition: form-data; name=\"type\"\r\n\r\n"
+    body << "#{type}\r\n"
+    body << "--#{boundary}\r\n"
+    body << "Content-Disposition: form-data; name=\"file\"; filename=\"#{filename}\"\r\n"
+    body << "Content-Type: #{content_type}\r\n\r\n"
+    body << content
+    body << "\r\n--#{boundary}--\r\n"
+
+    [ body, "multipart/form-data; boundary=#{boundary}" ]
+  end
+
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
       "REMOTE_ADDR" => remote_addr)
 
+    env["CONTENT_TYPE"] = content_type if content_type
     env["HTTP_ORIGIN"] = origin if origin
     env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
     env["HTTP_HOST"] = host if host

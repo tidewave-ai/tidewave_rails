@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "ipaddr"
 require "json"
 require "rack/request"
+require "uri"
 require "tidewave/version"
 require "tidewave/tool"
 require "tidewave/database_adapter"
@@ -28,7 +30,11 @@ class Tidewave
   TIDEWAVE_ROUTE = "tidewave".freeze
   MCP_ROUTE = "mcp".freeze
   CONFIG_ROUTE = "config".freeze
+  UPLOAD_ROUTE = "upload".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
+  MAX_UPLOAD_SIZE = 10_000_000
+  ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
+  ALLOWED_UPLOAD_TYPES = [ "screenshot", "recording" ].freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -37,12 +43,15 @@ class Tidewave
   TEXT
 
   INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
+  INVALID_UPLOAD_ORIGIN = "For security reasons, this page only allows connections from the application's own origin.".freeze
+  INVALID_UPLOAD = "Bad Request: missing or invalid file parameter".freeze
 
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
     client_url: "https://tidewave.ai",
     framework_type: "rack",
-    team: {}
+    team: {},
+    tmp_dir: nil
   }.freeze
 
   def initialize(app, options = {})
@@ -60,8 +69,10 @@ class Tidewave
 
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
-      if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
-        return forbidden(INVALID_ORIGIN)
+
+      if request.get_header("HTTP_ORIGIN")
+        origin_error = origin_error(request, path)
+        return forbidden(origin_error) if origin_error
       end
 
       case [ request.request_method, path ]
@@ -71,6 +82,8 @@ class Tidewave
         config_endpoint(request)
       when [ "POST", [ TIDEWAVE_ROUTE, MCP_ROUTE ] ]
         mcp_endpoint(request)
+      when [ "POST", [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ] ]
+        upload_endpoint(request)
       else
         # The MCP Streamable HTTP transport requires the MCP endpoint to answer
         # non-POST methods with 405 (GET without SSE support, DELETE, etc.)
@@ -154,8 +167,29 @@ class Tidewave
       "orm_adapter" => @options[:orm_adapter],
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
-      "local_port" => local_port(request)
+      "local_port" => local_port(request),
+      "tmp_dir" => tmp_dir
     }
+  end
+
+  def upload_endpoint(request)
+    return text_response(400, INVALID_UPLOAD) if upload_too_large?(request)
+
+    params = request.POST
+    type = params["type"]
+    upload = normalize_upload(params["file"])
+
+    unless ALLOWED_UPLOAD_TYPES.include?(type) && upload[:path] && allowed_content_type?(upload[:content_type])
+      return text_response(400, INVALID_UPLOAD)
+    end
+
+    FileUtils.mkdir_p(upload_dir(type))
+    destination = upload_path(type, upload[:filename])
+    FileUtils.cp(upload[:path], destination)
+
+    json_response({ "status" => "ok", "path" => destination })
+  rescue ArgumentError
+    text_response(400, INVALID_UPLOAD)
   end
 
   def json_response(payload, status: 200, headers: {})
@@ -196,8 +230,22 @@ class Tidewave
     }
   end
 
-  def origin_allowed_path?(path)
-    path == [ TIDEWAVE_ROUTE ] || path == [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+  def origin_error(request, path)
+    case path
+    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+      nil
+    when [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
+      same_origin?(request) ? nil : INVALID_UPLOAD_ORIGIN
+    else
+      INVALID_ORIGIN
+    end
+  end
+
+  def same_origin?(request)
+    origin = URI.parse(request.get_header("HTTP_ORIGIN"))
+    origin.host&.downcase == request.host.downcase
+  rescue URI::InvalidURIError
+    false
   end
 
   def local_port(request)
@@ -218,6 +266,61 @@ class Tidewave
     address.loopback? || address == IPAddr.new("::ffff:127.0.0.1")
   rescue IPAddr::InvalidAddressError
     false
+  end
+
+  def upload_too_large?(request)
+    request.content_length && request.content_length.to_i > MAX_UPLOAD_SIZE
+  end
+
+  def normalize_upload(upload)
+    case upload
+    when Hash
+      tempfile = upload[:tempfile] || upload["tempfile"]
+      {
+        filename: upload[:filename] || upload["filename"],
+        content_type: upload[:type] || upload["type"],
+        path: tempfile&.path
+      }
+    else
+      return {} unless upload.respond_to?(:original_filename) && upload.respond_to?(:content_type)
+
+      {
+        filename: upload.original_filename,
+        content_type: upload.content_type,
+        path: upload.tempfile&.path
+      }
+    end
+  end
+
+  def allowed_content_type?(content_type)
+    ALLOWED_UPLOAD_CONTENT_TYPES.include?(content_type.to_s.split(";").first)
+  end
+
+  def upload_dir(type)
+    File.join(expanded_tmp_dir, "tidewave", folder_for_upload_type(type))
+  end
+
+  def tmp_dir
+    (@options[:tmp_dir] || "tmp").to_s
+  end
+
+  def expanded_tmp_dir
+    File.expand_path(tmp_dir, @options[:root] || Dir.pwd)
+  end
+
+  def upload_path(type, filename)
+    raise ArgumentError if filename.to_s.empty? || filename.include?("..")
+
+    File.join(upload_dir(type), filename)
+  end
+
+  def folder_for_upload_type(type)
+    case type
+    when "screenshot"
+      "screenshots"
+    when "recording"
+      "recordings"
+    end
   end
 
   def validate_jsonrpc_message(message)
