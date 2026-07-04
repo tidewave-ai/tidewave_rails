@@ -72,7 +72,9 @@ class Tidewave
       when [ "POST", [ TIDEWAVE_ROUTE, MCP_ROUTE ] ]
         mcp_endpoint(request)
       else
-        not_found
+        # The MCP Streamable HTTP transport requires the MCP endpoint to answer
+        # non-POST methods with 405 (GET without SSE support, DELETE, etc.)
+        path == [ TIDEWAVE_ROUTE, MCP_ROUTE ] ? method_not_allowed() : not_found()
       end
     else
       strip_x_frame_options(@app.call(env))
@@ -83,7 +85,7 @@ class Tidewave
 
   def strip_x_frame_options(response)
     status, headers, body = response
-    headers.delete("X-Frame-Options")
+    headers.delete("x-frame-options")
     [ status, headers, body ]
   end
 
@@ -105,25 +107,44 @@ class Tidewave
   end
 
   def config_endpoint(request)
-    json_response(config_data(request), headers: { "Access-Control-Allow-Origin" => "*" })
+    json_response(config_data(request), headers: { "access-control-allow-origin" => "*" })
   end
 
   def mcp_endpoint(request)
-    body = request.body.read
+    message = JSON.parse(request.body.read)
 
-    message = JSON.parse(body)
-    validation_error = validate_jsonrpc_message(message)
-    return jsonrpc_error_response(nil, -32600, validation_error) if validation_error
-
-    response = handle_mcp_message(message)
-    return json_response({ "status" => "ok" }, status: 202) if response.nil?
-
-    json_response(response)
+    if message.is_a?(Array)
+      handle_mcp_batch(message)
+    else
+      handle_mcp_single(message)
+    end
   rescue JSON::ParserError
-    jsonrpc_error_response(nil, -32700, "Parse error")
+    jsonrpc_error_response(nil, -32700, "Parse error", status: 400)
   rescue StandardError => error
     @logger&.error("Error handling MCP request: #{error.message}")
     jsonrpc_error_response(nil, -32603, "Internal error")
+  end
+
+  def handle_mcp_single(message)
+    validation_error = validate_jsonrpc_message(message)
+    return jsonrpc_error_response(nil, -32600, validation_error, status: 400) if validation_error
+
+    response = handle_mcp_message(message)
+    response.nil? ? accepted_response : json_response(response)
+  end
+
+  def handle_mcp_batch(messages)
+    return jsonrpc_error_response(nil, -32600, "Invalid Request", status: 400) if messages.empty?
+
+    responses = messages.map { |message| handle_mcp_batch_message(message) }.compact
+    responses.empty? ? accepted_response : json_response(responses)
+  end
+
+  def handle_mcp_batch_message(message)
+    validation_error = validate_jsonrpc_message(message)
+    return jsonrpc_error_response_body(nil, -32600, validation_error) if validation_error
+
+    handle_mcp_message(message)
   end
 
   def config_data(request)
@@ -151,14 +172,27 @@ class Tidewave
     text_response(404, "Not Found")
   end
 
+  def method_not_allowed
+    status, headers, body = text_response(405, "Method Not Allowed")
+    [ status, headers.merge("allow" => "POST"), body ]
+  end
+
+  def accepted_response
+    [ 202, { "content-length" => "0" }, [] ]
+  end
+
   def text_response(status, message)
     [ status, response_headers("text/plain; charset=utf-8", message), [ message ] ]
   end
 
+  # Rack 3 requires response header keys to be lowercase. Capitalized keys break
+  # case-sensitive middleware such as Rack::Deflater, which strips "content-length"
+  # before gzipping; a surviving "Content-Length" leaves a stale (uncompressed)
+  # length on the compressed body and hangs spec-compliant HTTP clients.
   def response_headers(content_type, body)
     {
-      "Content-Type" => content_type,
-      "Content-Length" => body.bytesize.to_s
+      "content-type" => content_type,
+      "content-length" => body.bytesize.to_s
     }
   end
 
@@ -192,7 +226,7 @@ class Tidewave
 
     has_id = message.key?("id")
     has_method = message.key?("method")
-    has_result = message.key?("result")
+    has_result = message.key?("result") || message.key?("error")
 
     return nil if has_method
     return nil if has_id && has_result
@@ -200,14 +234,17 @@ class Tidewave
     "Invalid JSON-RPC message structure"
   end
 
+  # Returns the JSON-RPC response for a request, or nil for messages that
+  # must not be replied to (notifications and client-sent responses), which
+  # the transport acknowledges with 202 Accepted.
   def handle_mcp_message(message)
+    return nil unless message.key?("method") && message.key?("id")
+
     method = message["method"]
     request_id = message["id"]
     params = message["params"].is_a?(Hash) ? message["params"] : {}
 
     case method
-    when "notifications/initialized", "notifications/cancelled"
-      nil
     when "ping"
       jsonrpc_success_response_body(request_id, {})
     when "initialize"
@@ -216,6 +253,12 @@ class Tidewave
       jsonrpc_success_response_body(request_id, { "tools" => tool_definitions })
     when "tools/call"
       handle_tool_call(request_id, params)
+    when "prompts/list"
+      jsonrpc_success_response_body(request_id, { "prompts" => [] })
+    when "resources/list"
+      jsonrpc_success_response_body(request_id, { "resources" => [] })
+    when "resources/templates/list"
+      jsonrpc_success_response_body(request_id, { "resourceTemplates" => [] })
     else
       {
         "jsonrpc" => "2.0",
@@ -233,14 +276,9 @@ class Tidewave
     client_version = params["protocolVersion"]
     return jsonrpc_error_response_body(request_id, -32602, "Protocol version is required") if client_version.nil? || client_version.empty?
 
-    if client_version < PROTOCOL_VERSION
-      return jsonrpc_error_response_body(
-        request_id,
-        -32602,
-        "Unsupported protocol version. Server supports #{PROTOCOL_VERSION} or later"
-      )
-    end
-
+    # Version negotiation: when the client requests a version we don't
+    # support, we respond with the version we do support and the client
+    # decides whether to continue or disconnect.
     jsonrpc_success_response_body(request_id, {
       "protocolVersion" => PROTOCOL_VERSION,
       "capabilities" => { "tools" => { "listChanged" => false } },
@@ -276,8 +314,8 @@ class Tidewave
     }
   end
 
-  def jsonrpc_error_response(request_id, code, message)
-    json_response(jsonrpc_error_response_body(request_id, code, message))
+  def jsonrpc_error_response(request_id, code, message, status: 200)
+    json_response(jsonrpc_error_response_body(request_id, code, message), status: status)
   end
 
   def jsonrpc_error_response_body(request_id, code, message)

@@ -25,7 +25,7 @@ class TidewaveMcpTest < Minitest::Test
     )
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
+    assert_equal "application/json", headers["content-type"]
 
     payload = JSON.parse(body)
     assert_equal "2.0", payload["jsonrpc"]
@@ -33,10 +33,24 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal({}, payload["result"])
   end
 
+  def test_get_mcp_returns_method_not_allowed
+    status, headers, _body = perform_request(@app, path: "/tidewave/mcp", method: "GET")
+
+    assert_equal 405, status
+    assert_equal "POST", headers["allow"]
+  end
+
+  def test_delete_mcp_returns_method_not_allowed
+    status, headers, _body = perform_request(@app, path: "/tidewave/mcp", method: "DELETE")
+
+    assert_equal 405, status
+    assert_equal "POST", headers["allow"]
+  end
+
   def test_empty_request_body_returns_parse_error
     status, _headers, body = perform_request(@app, path: "/tidewave/mcp", method: "POST")
 
-    assert_equal 200, status
+    assert_equal 400, status
 
     payload = JSON.parse(body)
     assert_equal(-32700, payload.dig("error", "code"))
@@ -46,7 +60,7 @@ class TidewaveMcpTest < Minitest::Test
   def test_invalid_json_returns_parse_error
     status, _headers, body = perform_request(@app, path: "/tidewave/mcp", method: "POST", body: "invalid json")
 
-    assert_equal 200, status
+    assert_equal 400, status
 
     payload = JSON.parse(body)
     assert_equal(-32700, payload.dig("error", "code"))
@@ -61,15 +75,15 @@ class TidewaveMcpTest < Minitest::Test
       body: JSON.generate({ jsonrpc: "1.0", method: "ping", id: 1 })
     )
 
-    assert_equal 200, status
+    assert_equal 400, status
 
     payload = JSON.parse(body)
     assert_equal(-32600, payload.dig("error", "code"))
     assert_equal("Invalid JSON-RPC version", payload.dig("error", "message"))
   end
 
-  def test_notification_returns_accepted
-    status, headers, body = perform_request(
+  def test_notification_returns_accepted_with_no_body
+    status, _headers, body = perform_request(
       @app,
       path: "/tidewave/mcp",
       method: "POST",
@@ -77,8 +91,130 @@ class TidewaveMcpTest < Minitest::Test
     )
 
     assert_equal 202, status
-    assert_equal "application/json", headers["Content-Type"]
-    assert_equal({ "status" => "ok" }, JSON.parse(body))
+    assert_equal "", body
+  end
+
+  def test_unknown_notification_returns_accepted_with_no_body
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", method: "notifications/roots/list_changed" })
+    )
+
+    assert_equal 202, status
+    assert_equal "", body
+  end
+
+  def test_client_response_returns_accepted_with_no_body
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", id: 1, result: {} })
+    )
+
+    assert_equal 202, status
+    assert_equal "", body
+  end
+
+  def test_client_error_response_returns_accepted_with_no_body
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", id: 1, error: { code: -32601, message: "Method not found" } })
+    )
+
+    assert_equal 202, status
+    assert_equal "", body
+  end
+
+  def test_batch_of_requests_returns_batched_responses
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate([
+        { jsonrpc: "2.0", method: "ping", id: 1 },
+        { jsonrpc: "2.0", method: "tools/list", id: 2 }
+      ])
+    )
+
+    assert_equal 200, status
+
+    payload = JSON.parse(body)
+    assert_instance_of Array, payload
+    assert_equal [ 1, 2 ], payload.map { |response| response["id"] }
+    assert_equal({}, payload[0]["result"])
+    assert_equal DEFAULT_TOOL_NAMES, payload[1].dig("result", "tools").map { |tool| tool["name"] }.sort
+  end
+
+  def test_batch_of_notifications_returns_accepted_with_no_body
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate([
+        { jsonrpc: "2.0", method: "notifications/initialized" },
+        { jsonrpc: "2.0", method: "notifications/cancelled" }
+      ])
+    )
+
+    assert_equal 202, status
+    assert_equal "", body
+  end
+
+  def test_batch_excludes_responses_for_notifications
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate([
+        { jsonrpc: "2.0", method: "ping", id: 1 },
+        { jsonrpc: "2.0", method: "notifications/initialized" }
+      ])
+    )
+
+    assert_equal 200, status
+
+    payload = JSON.parse(body)
+    assert_equal 1, payload.length
+    assert_equal 1, payload[0]["id"]
+  end
+
+  def test_batch_with_invalid_entry_includes_error_response
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate([
+        { jsonrpc: "2.0", method: "ping", id: 1 },
+        42
+      ])
+    )
+
+    assert_equal 200, status
+
+    payload = JSON.parse(body)
+    assert_equal 2, payload.length
+    assert_equal({}, payload[0]["result"])
+    assert_nil payload[1]["id"]
+    assert_equal(-32600, payload[1].dig("error", "code"))
+  end
+
+  def test_empty_batch_returns_invalid_request
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate([])
+    )
+
+    assert_equal 400, status
+
+    payload = JSON.parse(body)
+    assert_equal(-32600, payload.dig("error", "code"))
   end
 
   def test_initialize_requires_protocol_version
@@ -117,6 +253,62 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal "tidewave", payload.dig("result", "serverInfo", "name")
     assert_equal Tidewave::VERSION, payload.dig("result", "serverInfo", "version")
     assert_equal DEFAULT_TOOL_NAMES, payload.dig("result", "tools").map { |tool| tool["name"] }.sort
+  end
+
+  def test_initialize_negotiates_unsupported_protocol_version
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({
+        jsonrpc: "2.0",
+        method: "initialize",
+        id: 1,
+        params: { protocolVersion: "2024-11-05" }
+      })
+    )
+
+    assert_equal 200, status
+
+    payload = JSON.parse(body)
+    assert_nil payload["error"]
+    assert_equal Tidewave::PROTOCOL_VERSION, payload.dig("result", "protocolVersion")
+  end
+
+  def test_prompts_list_returns_empty_list
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", method: "prompts/list", id: 1 })
+    )
+
+    assert_equal 200, status
+    assert_equal [], JSON.parse(body).dig("result", "prompts")
+  end
+
+  def test_resources_list_returns_empty_list
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", method: "resources/list", id: 1 })
+    )
+
+    assert_equal 200, status
+    assert_equal [], JSON.parse(body).dig("result", "resources")
+  end
+
+  def test_resources_templates_list_returns_empty_list
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", method: "resources/templates/list", id: 1 })
+    )
+
+    assert_equal 200, status
+    assert_equal [], JSON.parse(body).dig("result", "resourceTemplates")
   end
 
   def test_tools_list_returns_loaded_tools
