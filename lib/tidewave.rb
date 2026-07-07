@@ -8,6 +8,7 @@ require "uri"
 require "tidewave/version"
 require "tidewave/tool"
 require "tidewave/database_adapter"
+require "tidewave/magic_bytes"
 require "tidewave/railtie" if defined?(Rails::Railtie)
 
 class Tidewave
@@ -179,7 +180,7 @@ class Tidewave
     type = params["type"]
     upload = normalize_upload(params["file"])
 
-    unless ALLOWED_UPLOAD_TYPES.include?(type) && upload[:path] && allowed_content_type?(upload[:content_type])
+    unless ALLOWED_UPLOAD_TYPES.include?(type) && allowed_upload?(upload)
       return text_response(400, INVALID_UPLOAD)
     end
 
@@ -292,8 +293,10 @@ class Tidewave
     end
   end
 
-  def allowed_content_type?(content_type)
-    ALLOWED_UPLOAD_CONTENT_TYPES.include?(content_type.to_s.split(";").first)
+  def allowed_upload?(upload)
+    ALLOWED_UPLOAD_CONTENT_TYPES.include?(upload[:content_type].to_s.split(";").first) &&
+      upload[:path] &&
+      Tidewave::MagicBytes.type(File.binread(upload[:path], 128)) != :unknown
   end
 
   def upload_dir(type)
@@ -309,7 +312,15 @@ class Tidewave
   end
 
   def upload_path(type, filename)
-    raise ArgumentError if filename.to_s.empty? || filename.include?("..")
+    filename = filename.to_s
+
+    unless filename.match?(/\A[A-Za-z0-9_.-]+\z/) && !filename.include?("..")
+      raise ArgumentError, "filename must only contain numbers, letters, hyphens, and underscores: #{filename}"
+    end
+
+    unless [ ".png", ".jpg", ".jpeg", ".webm" ].include?(File.extname(filename).downcase)
+      raise ArgumentError, "filename must have a valid extension (.png, .jpg, .jpeg, .webm): #{filename}"
+    end
 
     File.join(upload_dir(type), filename)
   end

@@ -226,7 +226,7 @@ class TidewaveTest < Minitest::Test
       type: "screenshot",
       filename: "capture.png",
       content_type: "image/png",
-      content: "PNGDATA",
+      content: valid_png,
       origin: "http://example.test:3000",
       host: "example.test:3000"
     )
@@ -236,7 +236,7 @@ class TidewaveTest < Minitest::Test
     assert_equal 200, status
     assert_equal "application/json", headers["Content-Type"]
     assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
-    assert_equal "PNGDATA", File.binread(expected_path)
+    assert_equal valid_png, File.binread(expected_path)
   end
 
   def test_upload_endpoint_accepts_valid_recording_without_origin
@@ -245,14 +245,14 @@ class TidewaveTest < Minitest::Test
       type: "recording",
       filename: "capture.webm",
       content_type: "video/webm;codecs=vp9",
-      content: "WEBMDATA"
+      content: valid_webm
     )
 
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "recordings", "capture.webm")
 
     assert_equal 200, status
     assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
-    assert_equal "WEBMDATA", File.binread(expected_path)
+    assert_equal valid_webm, File.binread(expected_path)
   end
 
   def test_upload_endpoint_uses_configured_tmp_dir
@@ -269,14 +269,14 @@ class TidewaveTest < Minitest::Test
       type: "screenshot",
       filename: "capture.png",
       content_type: "image/png",
-      content: "PNGDATA"
+      content: valid_png
     )
 
     expected_path = File.join(@tmpdir, "custom-tmp", "tidewave", "screenshots", "capture.png")
 
     assert_equal 200, status
     assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
-    assert_equal "PNGDATA", File.binread(expected_path)
+    assert_equal valid_png, File.binread(expected_path)
   end
 
   def test_upload_endpoint_rejects_invalid_type_or_content_type
@@ -284,7 +284,39 @@ class TidewaveTest < Minitest::Test
       { type: "other", filename: "capture.png", content_type: "image/png" },
       { type: "screenshot", filename: "capture.txt", content_type: "text/plain" }
     ].each do |upload|
-      status, _headers, body = perform_multipart_upload(@app, **upload, content: "DATA")
+      status, _headers, body = perform_multipart_upload(@app, **upload, content: valid_png)
+
+      assert_equal 400, status
+      assert_equal Tidewave::INVALID_UPLOAD, body
+    end
+  end
+
+  def test_upload_endpoint_rejects_invalid_file_magic_bytes
+    status, _headers, body = perform_multipart_upload(
+      @app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: "not an image"
+    )
+
+    assert_equal 400, status
+    assert_equal Tidewave::INVALID_UPLOAD, body
+  end
+
+  def test_upload_endpoint_rejects_invalid_filenames
+    [
+      "capture png.jpg",
+      "capture.gif",
+      "..capture.png"
+    ].each do |filename|
+      status, _headers, body = perform_multipart_upload(
+        @app,
+        type: "screenshot",
+        filename: filename,
+        content_type: "image/jpeg",
+        content: valid_jpg
+      )
 
       assert_equal 400, status
       assert_equal Tidewave::INVALID_UPLOAD, body
@@ -297,7 +329,7 @@ class TidewaveTest < Minitest::Test
       type: "screenshot",
       filename: "capture.png",
       content_type: "image/png",
-      content: "PNGDATA",
+      content: valid_png,
       origin: "http://evil.test:3000",
       host: "example.test:3000"
     )
@@ -359,7 +391,7 @@ class TidewaveTest < Minitest::Test
 
   def multipart_body(type:, filename:, content_type:, content:)
     boundary = "----tidewave-test-boundary"
-    body = +""
+    body = +"".b
     body << "--#{boundary}\r\n"
     body << "Content-Disposition: form-data; name=\"type\"\r\n\r\n"
     body << "#{type}\r\n"
@@ -370,6 +402,18 @@ class TidewaveTest < Minitest::Test
     body << "\r\n--#{boundary}--\r\n"
 
     [ body, "multipart/form-data; boundary=#{boundary}" ]
+  end
+
+  def valid_jpg
+    "\xFF\xD8\xFF\xE0JFIF\xFF\xD9".b
+  end
+
+  def valid_png
+    "\x89PNG\r\n\x1A\nDATA".b
+  end
+
+  def valid_webm
+    "\x1A\x45\xDF\xA3\x42\x82webmDATA".b
   end
 
   def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil)
