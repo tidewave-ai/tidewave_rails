@@ -12,7 +12,13 @@ class TidewaveTest < Minitest::Test
       [ 200, { "content-type" => "text/plain", "x-frame-options" => "DENY" }, [ "demo response" ] ]
     end
 
-    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app", root: @tmpdir)
+    @app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      allowed_origins: [ "example.test" ],
+      project_name: "test-app",
+      root: @tmpdir
+    )
   end
 
   def teardown
@@ -336,6 +342,46 @@ class TidewaveTest < Minitest::Test
 
     assert_equal 403, status
     assert_equal Tidewave::INVALID_UPLOAD_ORIGIN, body
+  end
+
+  def test_upload_endpoint_does_not_trust_host_header_for_origin_check
+    status, _headers, body = perform_multipart_upload(
+      @app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: valid_png,
+      origin: "http://evil.test:3000",
+      host: "evil.test:3000"
+    )
+
+    assert_equal 403, status
+    assert_equal Tidewave::INVALID_UPLOAD_ORIGIN, body
+  end
+
+  def test_upload_endpoint_accepts_configured_origin_with_different_port
+    app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      allowed_origins: [ "http://example.test:4000" ],
+      project_name: "test-app",
+      root: @tmpdir
+    )
+
+    status, _headers, body = perform_multipart_upload(
+      app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: valid_png,
+      origin: "http://example.test:3000",
+      host: "evil.test:3000"
+    )
+
+    expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
+
+    assert_equal 200, status
+    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
   end
 
   def test_no_origin_header_allowed

@@ -60,6 +60,8 @@ The following config is available:
 
   * `allow_remote_access` - Tidewave only allows requests from localhost by default, even if your server listens on other interfaces, for security purposes. Read [our security guidelines for more information and when to allow remote access](https://hexdocs.pm/tidewave/security.html) (if you know what you are doing)
 
+  * `allowed_origins` - hosts or origins allowed to upload screenshots and recordings from the browser. By default, Tidewave uses Rails' configured default URL host, or `localhost` when no default URL host is configured. Ports are ignored, so `http://localhost:3000` and `http://localhost:4000` both allow `localhost`
+
   * `logger_middleware` - The logger middleware Tidewave should wrap to silence its own logs
 
   * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
