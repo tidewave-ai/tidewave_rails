@@ -240,7 +240,7 @@ class TidewaveTest < Minitest::Test
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
 
     assert_equal 200, status
-    assert_equal "application/json", headers["Content-Type"]
+    assert_equal "application/json", headers["content-type"]
     assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
     assert_equal valid_png, File.binread(expected_path)
   end
