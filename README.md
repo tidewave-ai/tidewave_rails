@@ -1,24 +1,119 @@
-# Tidewave
+# Tidewave Rails
 
-Tidewave is the coding agent for full-stack web app development. Integrate Claude Code, OpenAI Codex, and other agents with your web app and web framework at every layer, from UI to database. [See our website](https://tidewave.ai) for more information.
+Tidewave Rails is an MCP server that provides runtime-level tools for developing Ruby on Rails apps using coding agents.
 
-This project can also be used as [a standalone Model Context Protocol server](https://hexdocs.pm/tidewave/mcp.html).
+Your agent will be able to use this MCP server to talk to your running Rails app in development to:
+
+- execute code in the context of the running app (like a Rails console for agents)
+- read the app's live logs
+- query your development database
+- get source locations of classes and methods
+- read documentation pinned to the exact gem versions your app depends on
+
+This MCP server is an open-source component of [Tidewave](https://tidewave.ai), the agentic development environment for Rails and Phoenix.
+
+You can use this project as a standalone MCP server or integrated with the [Tidewave product](https://tidewave.ai).
+
+To use it as a standalone MCP server, follow the installation instructions below.
 
 ## Installation
 
-You can install Tidewave by running:
+### 1. Add the Tidewave gem to your app
+
+You can add Tidewave Rails to your app by running:
 
 ```shell
 bundle add tidewave --group development
 ```
 
-or by manully adding the `tidewave` gem to the development group in your Gemfile:
+or by manually adding the `tidewave` gem to the development group in your Gemfile:
 
 ```ruby
 gem "tidewave", group: :development
 ```
 
-Now make sure [Tidewave is installed](https://hexdocs.pm/tidewave/installation.html) and you are ready to connect Tidewave to your app.
+### 2. Add the Tidewave MCP to your agent/editor
+
+Add the Tidewave MCP server to your editor or MCP client configuration as the type "http" (streamable), pointing to the `/tidewave/mcp` path and port your web application is running at. For example, `http://localhost:3000/tidewave/mcp`.
+
+We also have specific instructions for:
+
+- [Claude Code](https://tidewave.hexdocs.pm/mcp_claude_code.html)
+- [Codex](https://tidewave.hexdocs.pm/mcp_codex.html)
+- [Cursor](https://tidewave.hexdocs.pm/mcp_cursor.html)
+- [Neovim](https://tidewave.hexdocs.pm/mcp_neovim.html)
+- [OpenCode](https://tidewave.hexdocs.pm/mcp_opencode.html)
+- [VS Code](https://tidewave.hexdocs.pm/mcp_vscode.html)
+- [Zed](https://tidewave.hexdocs.pm/mcp_zed.html)
+- [Others](https://tidewave.hexdocs.pm/mcp.html)
+
+## Usage
+
+As with any other MCP server, your agent will call the tools exposed by the Tidewave MCP whenever it sees fit. But you can also prompt it to call them explicitly.
+
+## Available MCP tools
+
+### `project_eval`
+
+Evaluates Ruby code in the context of your running application, with access to its runtime, loaded dependencies, and in-memory data, returning the result plus anything printed to standard output. It's like a Rails console for the agent.
+
+[![project_eval demo](docs/assets/project_eval-poster.png)](https://asciinema.org/a/v0Bs9WtOUARzewC3)
+
+Your agent can use it when it would rather run code than assume behavior, grounding its next step in what the running app actually does. For example, calling a method to see what comes back or reproducing a failing code path against live app state to debug it.
+
+### `execute_sql_query`
+
+Runs a SQL query against your app's development database and returns the rows to the agent.
+
+[![execute_sql_query demo](docs/assets/execute_sql_query-poster.png)](https://asciinema.org/a/qJtkEDf2YAPqjBHI)
+
+Your agent can use it to run any SQL against your development database. For example, ask it to insert some test records to see how a page looks with realistic data. Or, after a create action, the agent can verify whether the record was saved with the expected values.
+
+### `get_docs`
+
+Looks up the documentation for a class, method, or constant, reading from the exact gem versions locked in your app's Gemfile.lock.
+
+[![get_docs demo](docs/assets/get_docs-poster.png)](https://asciinema.org/a/Aa0u915syzncFYH8)
+
+Your agent can use it when it's unsure how a class or method works, so the code it generates is grounded in the docs for the exact versions of the gems your app uses, rather than training data that may be stale or a generic docs lookup that can't guarantee it matches the version your app depends on.
+
+### `get_logs`
+
+Returns output from your running server's log.
+
+[![get_logs demo](docs/assets/get_logs-poster.png)](https://asciinema.org/a/1260413)
+
+Your agent can use it to see what happened after a request. For example, reading the request log and backtrace when something misbehaves, or checking the log after an action to confirm the request came in with the expected params.
+
+### `get_models`
+
+Lists all of your app's models and where each one is defined, by file and line.
+
+[![get_models demo](docs/assets/get_models-poster.png)](https://asciinema.org/a/qeELC7wEgMEI5T7n)
+
+Your agent can use it to map the data domain and find where each model lives before opening files, rather than grepping around for class definitions.
+
+### `get_source_location`
+
+Returns the file and line where a class, module, or method is defined, across both your app and its dependencies.
+
+[![get_source_location demo](docs/assets/get_source_location-poster.png)](https://asciinema.org/a/1260415)
+
+Your agent can use it to jump straight to where a class or method is defined, by file and line, instead of grepping for it, including when the definition lives in a gem dependency.
+
+Also, because it resolves the location from your running app instead of parsing source text, it handles metaprogramming, where a method is generated at runtime and does not appear as a literal `def` for grep to find.
+
+> [!NOTE]
+> #### Why no tools for routes, associations, etc?
+>
+> Tidewave does not include tools for listing your routes, associations, etc. because
+> agents are better off reading their respective source files, which gives agents more
+> context and enables them to perform any necessary edit without additional tool calls.
+>
+> Instead, Tidewave aims to fill in missing gaps, such as evaluating code inside your
+> Rails app (without starting new instances) and finding source location, which can be
+> tricky, even with grepping, due to metaprogramming and the different places Bundler
+> can install your dependencies.
 
 ## Troubleshooting
 
@@ -65,38 +160,6 @@ The following config is available:
   * `preferred_orm` - which ORM to use, either `:active_record` (default) or `:sequel`
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
-
-## Available tools
-
-- `execute_sql_query` - executes a SQL query within your application
-  database, useful for the agent to verify the result of an action
-
-- `get_docs` - get the documentation for a given module/class/method.
-  It consults the exact versions used by the project, ensuring you always
-  get correct information
-
-- `get_logs` - reads logs written by the server
-
-- `get_models` - lists all modules in the application and their location
-  for quick discovery
-
-- `get_source_location` - get the source location for a given module/class/method,
-  so an agent can directly read the source skipping search
-
-- `project_eval` - evaluates code within the Rails application itself, giving the agent
-  access to your runtime, dependencies, and in-memory data
-
-> [!NOTE]
-> #### Why no tools for routes, associations, etc?
->
-> Tidewave does not include tools for listing your routes, associations, etc. because
-> agents are better off reading their respective source files, which gives agents more
-> context and enable them to perform any necessary edit without additional tools calls.
->
-> Instead, Tidewave aims to fill in missing gaps, such as evaluating code inside your
-> Rails app (without starting new instances) and finding source location, which can be
-> tricky, even with grepping, due to meta-programming and the different places Bundler
-> can install your dependencies.
 
 ## Acknowledgements
 
