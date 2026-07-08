@@ -3,6 +3,7 @@
 require "fileutils"
 require "ipaddr"
 require "json"
+require "pathname"
 require "rack/request"
 require "uri"
 require "tidewave/version"
@@ -190,7 +191,7 @@ class Tidewave
     destination = upload_path(type, upload[:filename])
     FileUtils.cp(upload[:path], destination)
 
-    json_response({ "status" => "ok", "path" => destination })
+    json_response({ "status" => "ok", "path" => relative_path_from_root(destination) })
   rescue ArgumentError
     text_response(400, INVALID_UPLOAD)
   end
@@ -331,7 +332,7 @@ class Tidewave
   end
 
   def expanded_tmp_dir
-    File.expand_path(tmp_dir, @options[:root] || Dir.pwd)
+    File.expand_path(tmp_dir, root)
   end
 
   def upload_path(type, filename)
@@ -355,6 +356,14 @@ class Tidewave
     when "recording"
       "recordings"
     end
+  end
+
+  def relative_path_from_root(path)
+    Pathname.new(path).relative_path_from(Pathname.new(root)).to_s
+  end
+
+  def root
+    @root ||= File.expand_path(@options[:root] || Dir.pwd)
   end
 
   def validate_jsonrpc_message(message)

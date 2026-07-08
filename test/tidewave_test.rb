@@ -238,10 +238,11 @@ class TidewaveTest < Minitest::Test
     )
 
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
+    expected_response_path = File.join("tmp", "tidewave", "screenshots", "capture.png")
 
     assert_equal 200, status
     assert_equal "application/json", headers["content-type"]
-    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
     assert_equal valid_png, File.binread(expected_path)
   end
 
@@ -255,9 +256,10 @@ class TidewaveTest < Minitest::Test
     )
 
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "recordings", "capture.webm")
+    expected_response_path = File.join("tmp", "tidewave", "recordings", "capture.webm")
 
     assert_equal 200, status
-    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
     assert_equal valid_webm, File.binread(expected_path)
   end
 
@@ -279,9 +281,10 @@ class TidewaveTest < Minitest::Test
     )
 
     expected_path = File.join(@tmpdir, "custom-tmp", "tidewave", "screenshots", "capture.png")
+    expected_response_path = File.join("custom-tmp", "tidewave", "screenshots", "capture.png")
 
     assert_equal 200, status
-    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
     assert_equal valid_png, File.binread(expected_path)
   end
 
@@ -379,9 +382,10 @@ class TidewaveTest < Minitest::Test
     )
 
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
+    expected_response_path = File.join("tmp", "tidewave", "screenshots", "capture.png")
 
     assert_equal 200, status
-    assert_equal({ "status" => "ok", "path" => expected_path }, JSON.parse(body))
+    assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
   end
 
   def test_no_origin_header_allowed
