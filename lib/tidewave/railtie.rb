@@ -28,7 +28,6 @@ class Tidewave
         root: Rails.root,
         log_file: Rails.root.join("log", "#{Rails.env}.log"),
         orm_adapter: tidewave_config.preferred_orm,
-        tmp_dir: tidewave_config.tmp_dir,
         before_reload: -> { app.eager_load! }
       )
 

@@ -132,19 +132,6 @@ class TidewaveTest < Minitest::Test
     assert_equal "tmp", payload["tmp_dir"]
   end
 
-  def test_config_endpoint_returns_configured_tmp_dir
-    app = Tidewave.new(
-      @downstream_app,
-      allow_remote_access: true,
-      project_name: "demo-app",
-      tmp_dir: "custom-tmp"
-    )
-
-    _status, _headers, body = perform_request(app, path: "/tidewave/config")
-
-    assert_equal "custom-tmp", JSON.parse(body)["tmp_dir"]
-  end
-
   def test_config_endpoint_includes_orm_adapter_when_configured
     app = Tidewave.new(
       @downstream_app,
@@ -260,31 +247,6 @@ class TidewaveTest < Minitest::Test
     assert_equal 200, status
     assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
     assert_equal valid_webm, File.binread(expected_path)
-  end
-
-  def test_upload_endpoint_uses_configured_tmp_dir
-    app = Tidewave.new(
-      @downstream_app,
-      allow_remote_access: true,
-      project_name: "test-app",
-      root: @tmpdir,
-      tmp_dir: "custom-tmp"
-    )
-
-    status, _headers, body = perform_multipart_upload(
-      app,
-      type: "screenshot",
-      filename: "capture.png",
-      content_type: "image/png",
-      content: valid_png
-    )
-
-    expected_path = File.join(@tmpdir, "custom-tmp", "tidewave", "screenshots", "capture.png")
-    expected_response_path = File.join("custom-tmp", "tidewave", "screenshots", "capture.png")
-
-    assert_equal 200, status
-    assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
-    assert_equal valid_png, File.binread(expected_path)
   end
 
   def test_upload_endpoint_rejects_invalid_type_or_content_type

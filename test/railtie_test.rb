@@ -24,8 +24,6 @@ class TidewaveRailtieTest < Minitest::Test
     assert_equal TidewaveRailtieTestApp::ROOT, options[:root]
     assert_equal TidewaveRailtieTestApp::ROOT.join("log", "#{Rails.env}.log"), options[:log_file]
     assert_equal :sequel, options[:orm_adapter]
-    assert options.key?(:tmp_dir)
-    assert_nil options[:tmp_dir]
     assert_kind_of Proc, options[:before_reload]
   end
 end

@@ -66,8 +66,6 @@ The following config is available:
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
 
-  * `tmp_dir` - temporary directory Tidewave uses for screenshots and recordings. Defaults to `tmp`, storing files under `tmp/tidewave/screenshots` and `tmp/tidewave/recordings`
-
 ## Available tools
 
 - `execute_sql_query` - executes a SQL query within your application

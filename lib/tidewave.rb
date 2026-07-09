@@ -37,6 +37,7 @@ class Tidewave
   MAX_UPLOAD_SIZE = 10_000_000
   ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
   ALLOWED_UPLOAD_TYPES = [ "screenshot", "recording" ].freeze
+  TMP_DIR = "tmp".freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -51,8 +52,7 @@ class Tidewave
     allow_remote_access: false,
     client_url: "https://tidewave.ai",
     framework_type: "rack",
-    team: {},
-    tmp_dir: nil
+    team: {}
   }.freeze
 
   def initialize(app, options = {})
@@ -61,6 +61,7 @@ class Tidewave
     raise ArgumentError, "project_name is required" if @options[:project_name].to_s.empty?
 
     @logger = @options[:logger]
+    @root = @options[:root] ? Pathname.new(@options[:root].to_s) : Pathname.pwd
     @tools = build_tool_registry
   end
 
@@ -71,10 +72,7 @@ class Tidewave
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
 
-      if request.get_header("HTTP_ORIGIN")
-        origin_error = origin_error(request, path)
-        return forbidden(origin_error) if origin_error
-      end
+      return forbidden(INVALID_ORIGIN) if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
 
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
@@ -169,7 +167,7 @@ class Tidewave
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
       "local_port" => local_port(request),
-      "tmp_dir" => tmp_dir
+      "tmp_dir" => TMP_DIR
     }
   end
 
@@ -231,13 +229,12 @@ class Tidewave
     }
   end
 
-  def origin_error(request, path)
-    case path
-    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ], [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
-      nil
-    else
-      INVALID_ORIGIN
-    end
+  def origin_allowed_path?(path)
+    [
+      [ TIDEWAVE_ROUTE ],
+      [ TIDEWAVE_ROUTE, CONFIG_ROUTE ],
+      [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
+    ].include?(path)
   end
 
   def local_port(request)
@@ -291,15 +288,7 @@ class Tidewave
   end
 
   def upload_dir(type)
-    File.join(expanded_tmp_dir, "tidewave", folder_for_upload_type(type))
-  end
-
-  def tmp_dir
-    (@options[:tmp_dir] || "tmp").to_s
-  end
-
-  def expanded_tmp_dir
-    File.expand_path(tmp_dir, root)
+    @root.join(TMP_DIR, "tidewave", folder_for_upload_type(type)).to_s
   end
 
   def upload_path(type, filename)
@@ -326,11 +315,7 @@ class Tidewave
   end
 
   def relative_path_from_root(path)
-    Pathname.new(path).relative_path_from(Pathname.new(root)).to_s
-  end
-
-  def root
-    @root ||= File.expand_path(@options[:root] || Dir.pwd)
+    Pathname.new(path).relative_path_from(@root).to_s
   end
 
   def validate_jsonrpc_message(message)
