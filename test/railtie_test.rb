@@ -16,7 +16,6 @@ class TidewaveRailtieTest < Minitest::Test
     options = tidewave_entry.args.first
 
     assert_equal false, options[:allow_remote_access]
-    assert_equal [ "localhost" ], options[:allowed_origins]
     assert_equal "https://example.test", options[:client_url]
     assert_equal "rails", options[:framework_type]
     assert_equal "TidewaveRailtieTestApp", options[:project_name]

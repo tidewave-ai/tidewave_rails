@@ -20,7 +20,6 @@ class Tidewave
         ActionDispatch::Callbacks,
         Tidewave,
         allow_remote_access: tidewave_config.allow_remote_access,
-        allowed_origins: tidewave_config.allowed_origins || Tidewave::Railtie.default_allowed_origins(app),
         client_url: tidewave_config.client_url,
         framework_type: "rails",
         project_name: app.class.module_parent.name,
@@ -60,11 +59,6 @@ class Tidewave
       # Do not pollute user logs with tidewave requests.
       logger_middleware = app.config.tidewave.logger_middleware || Rails::Rack::Logger
       app.middleware.insert_before(logger_middleware, Tidewave::QuietRequestsMiddleware)
-    end
-
-    def self.default_allowed_origins(app)
-      host = app.routes.default_url_options[:host]
-      host ? [ host ] : Tidewave::DEFAULT_ALLOWED_ORIGINS
     end
   end
 end

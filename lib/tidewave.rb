@@ -37,7 +37,6 @@ class Tidewave
   MAX_UPLOAD_SIZE = 10_000_000
   ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
   ALLOWED_UPLOAD_TYPES = [ "screenshot", "recording" ].freeze
-  DEFAULT_ALLOWED_ORIGINS = [ "localhost" ].freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -46,14 +45,12 @@ class Tidewave
   TEXT
 
   INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
-  INVALID_UPLOAD_ORIGIN = "For security reasons, this page only allows connections from the application's own origin.".freeze
   INVALID_UPLOAD = "Bad Request: missing or invalid file parameter".freeze
 
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
     client_url: "https://tidewave.ai",
     framework_type: "rack",
-    allowed_origins: nil,
     team: {},
     tmp_dir: nil
   }.freeze
@@ -236,41 +233,11 @@ class Tidewave
 
   def origin_error(request, path)
     case path
-    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ], [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
       nil
-    when [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
-      same_origin?(request) ? nil : INVALID_UPLOAD_ORIGIN
     else
       INVALID_ORIGIN
     end
-  end
-
-  def same_origin?(request)
-    origin_host = URI.parse(request.get_header("HTTP_ORIGIN")).host&.downcase
-
-    allowed_origin_hosts.include?(origin_host)
-  rescue URI::InvalidURIError
-    false
-  end
-
-  def allowed_origin_hosts
-    Array(@options[:allowed_origins] || DEFAULT_ALLOWED_ORIGINS).filter_map do |origin_or_host|
-      origin_or_host_to_host(origin_or_host)
-    end
-  end
-
-  def origin_or_host_to_host(origin_or_host)
-    value = origin_or_host.to_s.strip
-    return if value.empty?
-
-    host = uri_host(value) || uri_host("http://#{value}") || value
-    host.downcase
-  end
-
-  def uri_host(value)
-    URI.parse(value).host
-  rescue URI::InvalidURIError
-    nil
   end
 
   def local_port(request)
