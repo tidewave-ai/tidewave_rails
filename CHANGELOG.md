@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.5.2 (2026-07-09)
+
+* Improve OpenCode and Rack 3 compatibility
+
 ## v0.5.1 (2026-06-14)
 
 * Improve out-of-the-box experience for remote access (which remains opt-in)
