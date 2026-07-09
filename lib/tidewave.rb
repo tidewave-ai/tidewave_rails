@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "ipaddr"
 require "json"
+require "pathname"
 require "rack/request"
+require "uri"
 require "tidewave/version"
 require "tidewave/tool"
 require "tidewave/database_adapter"
+require "tidewave/magic_bytes"
 require "tidewave/railtie" if defined?(Rails::Railtie)
 
 class Tidewave
@@ -28,7 +32,12 @@ class Tidewave
   TIDEWAVE_ROUTE = "tidewave".freeze
   MCP_ROUTE = "mcp".freeze
   CONFIG_ROUTE = "config".freeze
+  UPLOAD_ROUTE = "upload".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
+  MAX_UPLOAD_SIZE = 10_000_000
+  ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
+  ALLOWED_UPLOAD_TYPES = [ "screenshot", "recording" ].freeze
+  TMP_DIR = "tmp".freeze
 
   INVALID_IP = <<~TEXT.freeze
     For security reasons, Tidewave does not accept remote connections by default.
@@ -37,6 +46,7 @@ class Tidewave
   TEXT
 
   INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
+  INVALID_UPLOAD = "Bad Request: missing or invalid file parameter".freeze
 
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
@@ -51,6 +61,7 @@ class Tidewave
     raise ArgumentError, "project_name is required" if @options[:project_name].to_s.empty?
 
     @logger = @options[:logger]
+    @root = @options[:root] ? Pathname.new(@options[:root].to_s) : Pathname.pwd
     @tools = build_tool_registry
   end
 
@@ -60,9 +71,8 @@ class Tidewave
 
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
-      if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
-        return forbidden(INVALID_ORIGIN)
-      end
+
+      return forbidden(INVALID_ORIGIN) if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
 
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
@@ -71,6 +81,8 @@ class Tidewave
         config_endpoint(request)
       when [ "POST", [ TIDEWAVE_ROUTE, MCP_ROUTE ] ]
         mcp_endpoint(request)
+      when [ "POST", [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ] ]
+        upload_endpoint(request)
       else
         # The MCP Streamable HTTP transport requires the MCP endpoint to answer
         # non-POST methods with 405 (GET without SSE support, DELETE, etc.)
@@ -154,8 +166,29 @@ class Tidewave
       "orm_adapter" => @options[:orm_adapter],
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
-      "local_port" => local_port(request)
+      "local_port" => local_port(request),
+      "tmp_dir" => TMP_DIR
     }
+  end
+
+  def upload_endpoint(request)
+    return text_response(400, INVALID_UPLOAD) if upload_too_large?(request)
+
+    params = request.POST
+    type = params["type"]
+    upload = normalize_upload(params["file"])
+
+    unless ALLOWED_UPLOAD_TYPES.include?(type) && allowed_upload?(upload)
+      return text_response(400, INVALID_UPLOAD)
+    end
+
+    FileUtils.mkdir_p(upload_dir(type))
+    destination = upload_path(type, upload[:filename])
+    FileUtils.cp(upload[:path], destination)
+
+    json_response({ "status" => "ok", "path" => relative_path_from_root(destination) })
+  rescue ArgumentError
+    text_response(400, INVALID_UPLOAD)
   end
 
   def json_response(payload, status: 200, headers: {})
@@ -197,7 +230,11 @@ class Tidewave
   end
 
   def origin_allowed_path?(path)
-    path == [ TIDEWAVE_ROUTE ] || path == [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+    [
+      [ TIDEWAVE_ROUTE ],
+      [ TIDEWAVE_ROUTE, CONFIG_ROUTE ],
+      [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
+    ].include?(path)
   end
 
   def local_port(request)
@@ -218,6 +255,67 @@ class Tidewave
     address.loopback? || address == IPAddr.new("::ffff:127.0.0.1")
   rescue IPAddr::InvalidAddressError
     false
+  end
+
+  def upload_too_large?(request)
+    request.content_length && request.content_length.to_i > MAX_UPLOAD_SIZE
+  end
+
+  def normalize_upload(upload)
+    case upload
+    when Hash
+      tempfile = upload[:tempfile] || upload["tempfile"]
+      {
+        filename: upload[:filename] || upload["filename"],
+        content_type: upload[:type] || upload["type"],
+        path: tempfile&.path
+      }
+    else
+      return {} unless upload.respond_to?(:original_filename) && upload.respond_to?(:content_type)
+
+      {
+        filename: upload.original_filename,
+        content_type: upload.content_type,
+        path: upload.tempfile&.path
+      }
+    end
+  end
+
+  def allowed_upload?(upload)
+    ALLOWED_UPLOAD_CONTENT_TYPES.include?(upload[:content_type].to_s.split(";").first) &&
+      upload[:path] &&
+      Tidewave::MagicBytes.type(File.binread(upload[:path], 128)) != :unknown
+  end
+
+  def upload_dir(type)
+    @root.join(TMP_DIR, "tidewave", folder_for_upload_type(type)).to_s
+  end
+
+  def upload_path(type, filename)
+    filename = filename.to_s
+
+    unless filename.match?(/\A[A-Za-z0-9_.-]+\z/) && !filename.include?("..")
+      raise ArgumentError, "filename must only contain numbers, letters, hyphens, and underscores: #{filename}"
+    end
+
+    unless [ ".png", ".jpg", ".jpeg", ".webm" ].include?(File.extname(filename).downcase)
+      raise ArgumentError, "filename must have a valid extension (.png, .jpg, .jpeg, .webm): #{filename}"
+    end
+
+    File.join(upload_dir(type), filename)
+  end
+
+  def folder_for_upload_type(type)
+    case type
+    when "screenshot"
+      "screenshots"
+    when "recording"
+      "recordings"
+    end
+  end
+
+  def relative_path_from_root(path)
+    Pathname.new(path).relative_path_from(@root).to_s
   end
 
   def validate_jsonrpc_message(message)
