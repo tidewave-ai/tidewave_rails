@@ -2,8 +2,7 @@
 
 class Tidewave
   class Configuration
-    attr_accessor :logger, :allow_remote_access, :preferred_orm, :dev, :client_url, :team,
-      :logger_middleware
+    attr_accessor :logger, :allow_remote_access, :preferred_orm, :dev, :client_url, :team, :logger_middleware
 
     def initialize
       # Rails has a hosts middleware which already checks for this
