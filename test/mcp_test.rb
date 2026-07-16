@@ -446,6 +446,43 @@ class TidewaveMcpStructuredContentTest < TidewaveActiveRecordTestCase
     )
   end
 
+  def test_tool_call_encodes_binary_sql_values
+    ActiveRecord::Base.connection.execute("CREATE TABLE mcp_binary (data blob)")
+    ActiveRecord::Base.connection.execute("INSERT INTO mcp_binary VALUES (X'6361669F')")
+
+    app = Tidewave.new(
+      ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] },
+      allow_remote_access: true,
+      project_name: "test-app",
+      orm_adapter: :active_record
+    )
+
+    status, _headers, body = perform_request(
+      app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        id: 1,
+        params: {
+          name: "execute_sql_query",
+          arguments: {
+            query: "SELECT data FROM mcp_binary"
+          }
+        }
+      })
+    )
+
+    payload = JSON.parse(body)
+    structured_content = payload.dig("result", "structuredContent")
+
+    assert_equal 200, status
+    refute payload.dig("result", "isError")
+    assert_equal [ [ "base64:Y2Fmnw==" ] ], structured_content["rows"]
+    assert_equal structured_content, JSON.parse(payload.dig("result", "content", 0, "text"))
+  end
+
   private
 
   def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil)

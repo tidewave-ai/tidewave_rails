@@ -22,7 +22,7 @@ class Tidewave
         # Format the result similar to ActiveRecord
         {
           columns: columns.map(&:to_s),
-          rows: rows.first(RESULT_LIMIT).map(&:values),
+          rows: normalize_result_rows(rows.first(RESULT_LIMIT).map(&:values)),
           row_count: rows.length,
           adapter: db.adapter_scheme.to_s.upcase,
           database: db.opts[:database]

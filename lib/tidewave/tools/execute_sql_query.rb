@@ -4,6 +4,8 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tool
   DESCRIPTION = <<~DESCRIPTION.freeze
     Executes the given SQL query against the database connection.
     Returns the result as a Ruby data structure.
+    Binary values are returned as base64-encoded strings prefixed with `base64:`.
+    Text values beginning with `base64:` are escaped by adding another colon (`base64::`).
 
     Note that the output is limited to 50 rows at a time. If you need to see more, perform additional calls
     using LIMIT and OFFSET in the query. If you know that only specific columns are relevant,

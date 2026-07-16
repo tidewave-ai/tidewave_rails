@@ -51,6 +51,24 @@ class TidewaveDatabaseAdaptersSequelTest < TidewaveSequelTestCase
     assert_equal 1, response[:row_count]
   end
 
+  def test_execute_query_scrubs_invalid_utf8_text_values
+    @db.run("CREATE TABLE sequel_invalid_utf8 (name text)")
+    @db.run("INSERT INTO sequel_invalid_utf8 VALUES (CAST(X'6361669F' AS TEXT))")
+
+    response = @adapter.execute_query("SELECT name FROM sequel_invalid_utf8")
+
+    assert_equal [ [ "caf�" ] ], response[:rows]
+  end
+
+  def test_execute_query_encodes_binary_values
+    @db.run("CREATE TABLE sequel_binary (data blob)")
+    @db.run("INSERT INTO sequel_binary VALUES (X'6361669F')")
+
+    response = @adapter.execute_query("SELECT data FROM sequel_binary")
+
+    assert_equal [ [ "base64:Y2Fmnw==" ] ], response[:rows]
+  end
+
   def test_execute_query_limits_rows_to_fifty
     response = @adapter.execute_query("SELECT * FROM #{@posts_table} ORDER BY id")
 

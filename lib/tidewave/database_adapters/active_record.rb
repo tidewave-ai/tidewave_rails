@@ -18,7 +18,7 @@ class Tidewave
         # Format the result
         {
           columns: result.columns,
-          rows: result.rows.first(RESULT_LIMIT),
+          rows: normalize_result_rows(result.rows.first(RESULT_LIMIT)),
           row_count: result.rows.length,
           adapter: conn.adapter_name,
           database: conn.pool.db_config.database
