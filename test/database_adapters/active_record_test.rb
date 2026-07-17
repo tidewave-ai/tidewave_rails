@@ -26,26 +26,6 @@ class TidewaveDatabaseAdaptersActiveRecordTest < TidewaveActiveRecordTestCase
     assert_equal 1, response[:row_count]
   end
 
-  def test_execute_query_scrubs_invalid_utf8_text_values
-    ActiveRecord::Base.connection.execute("CREATE TABLE active_record_invalid_utf8 (name text)")
-    ActiveRecord::Base.connection.execute(
-      "INSERT INTO active_record_invalid_utf8 VALUES (CAST(X'6361669F' AS TEXT))"
-    )
-
-    response = @adapter.execute_query("SELECT name FROM active_record_invalid_utf8")
-
-    assert_equal [ [ "caf�" ] ], response[:rows]
-  end
-
-  def test_execute_query_encodes_binary_values
-    ActiveRecord::Base.connection.execute("CREATE TABLE active_record_binary (data blob)")
-    ActiveRecord::Base.connection.execute("INSERT INTO active_record_binary VALUES (X'6361669F')")
-
-    response = @adapter.execute_query("SELECT data FROM active_record_binary")
-
-    assert_equal [ [ "base64:Y2Fmnw==" ] ], response[:rows]
-  end
-
   def test_execute_query_limits_rows_to_fifty
     rows_table = "active_record_rows"
 

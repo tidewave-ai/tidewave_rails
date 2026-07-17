@@ -31,21 +31,4 @@ class TidewaveDatabaseAdapterTest < Minitest::Test
 
     assert_equal "Unknown preferred ORM: unknown", error.message
   end
-
-  def test_normalize_result_rows_escapes_binary_prefix_in_text
-    rows = Tidewave::DatabaseAdapter.new.send(
-      :normalize_result_rows,
-      [ [ "base64:Y2Fmnw==", "base64::literal" ] ]
-    )
-
-    assert_equal [ [ "base64::Y2Fmnw==", "base64:::literal" ] ], rows
-  end
-
-  def test_normalize_result_rows_encodes_strings_without_a_utf8_converter
-    value = "encoded text".dup.force_encoding(Encoding::UTF_7)
-
-    rows = Tidewave::DatabaseAdapter.new.send(:normalize_result_rows, [ [ value ] ])
-
-    assert_equal [ [ "base64:ZW5jb2RlZCB0ZXh0" ] ], rows
-  end
 end

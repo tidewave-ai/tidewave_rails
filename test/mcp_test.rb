@@ -406,8 +406,8 @@ class TidewaveMcpTest < Minitest::Test
   end
 end
 
-class TidewaveMcpStructuredContentTest < TidewaveActiveRecordTestCase
-  def test_tool_call_includes_structured_content_for_hash_results
+class TidewaveMcpSqlQueryTest < TidewaveActiveRecordTestCase
+  def test_tool_call_returns_inspected_sql_result
     app = Tidewave.new(
       ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] },
       allow_remote_access: true,
@@ -428,27 +428,21 @@ class TidewaveMcpStructuredContentTest < TidewaveActiveRecordTestCase
     )
 
     payload = JSON.parse(body)
+    result = payload.dig("result", "content", 0, "text")
 
     assert_equal 200, status
-    assert_equal(
-      {
-        "columns" => [ "id", "name" ],
-        "rows" => [ [ 1, "example" ] ],
-        "row_count" => 1,
-        "adapter" => "SQLite",
-        "database" => ":memory:"
-      },
-      payload.dig("result", "structuredContent")
-    )
-    assert_equal(
-      "{\"columns\":[\"id\",\"name\"],\"rows\":[[1,\"example\"]],\"row_count\":1,\"adapter\":\"SQLite\",\"database\":\":memory:\"}",
-      payload.dig("result", "content", 0, "text")
-    )
+    assert_includes result, ':columns=>["id", "name"]'
+    assert_includes result, ':rows=>[[1, "example"]]'
+    assert_includes result, ":row_count=>1"
+    assert_includes result, ':adapter=>"SQLite"'
+    assert_includes result, ':database=>":memory:"'
   end
 
-  def test_tool_call_encodes_binary_sql_values
+  def test_tool_call_inspects_binary_sql_values
+    binary_value_with_non_utf8_byte = "caf\x9F".b
+    binary_value_hex = binary_value_with_non_utf8_byte.unpack1("H*")
     ActiveRecord::Base.connection.execute("CREATE TABLE mcp_binary (data blob)")
-    ActiveRecord::Base.connection.execute("INSERT INTO mcp_binary VALUES (X'6361669F')")
+    ActiveRecord::Base.connection.execute("INSERT INTO mcp_binary VALUES (X'#{binary_value_hex}')")
 
     app = Tidewave.new(
       ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] },
@@ -475,12 +469,10 @@ class TidewaveMcpStructuredContentTest < TidewaveActiveRecordTestCase
     )
 
     payload = JSON.parse(body)
-    structured_content = payload.dig("result", "structuredContent")
+    result = payload.dig("result", "content", 0, "text")
 
     assert_equal 200, status
-    refute payload.dig("result", "isError")
-    assert_equal [ [ "base64:Y2Fmnw==" ] ], structured_content["rows"]
-    assert_equal structured_content, JSON.parse(payload.dig("result", "content", 0, "text"))
+    assert_includes result, binary_value_with_non_utf8_byte.inspect
   end
 
   private
