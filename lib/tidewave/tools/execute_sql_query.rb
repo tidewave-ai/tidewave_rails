@@ -48,6 +48,17 @@ class Tidewave::Tools::ExecuteSqlQuery < Tidewave::Tool
   def call(arguments_hash)
     query = arguments_hash.fetch("query")
     arguments = arguments_hash.fetch("arguments", [])
-    @database_adapter.execute_query(query, arguments)
+    result = @database_adapter.execute_query(query, arguments)
+
+    preamble = if result[:row_count] > result[:rows].length
+      <<~TEXT
+        Query returned #{result[:row_count]} rows. Only the first #{result[:rows].length} rows are included in the result. Use your database's pagination syntax, such as LIMIT + OFFSET, to show more rows if applicable.
+
+      TEXT
+    else
+      ""
+    end
+
+    preamble + result.inspect
   end
 end
