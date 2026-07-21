@@ -236,7 +236,8 @@ class Tidewave
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
       "local_port" => local_port(request),
-      "tmp_dir" => TMP_DIR
+      "tmp_dir" => TMP_DIR,
+      "wsl_distro" => ENV["WSL_DISTRO_NAME"]
     }
   end
 

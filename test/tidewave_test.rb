@@ -97,6 +97,17 @@ class TidewaveTest < Minitest::Test
     assert_equal @tmpdir, payload["root"]
   end
 
+  def test_config_includes_the_wsl_distribution
+    previous_wsl_distro = ENV["WSL_DISTRO_NAME"]
+    ENV["WSL_DISTRO_NAME"] = "Ubuntu-24.04"
+    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(app, path: "/tidewave/config")
+    assert_equal "Ubuntu-24.04", JSON.parse(body)["wsl_distro"]
+  ensure
+    ENV["WSL_DISTRO_NAME"] = previous_wsl_distro
+  end
+
   def test_injects_toolbar_without_inspecting_request_headers
     downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ "<head></head>" ] ] }
     app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
