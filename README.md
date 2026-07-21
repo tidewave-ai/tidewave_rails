@@ -161,6 +161,8 @@ The following config is available:
 
   * `team` - set your Tidewave Team configuration, such as `config.tidewave.team = { id: "my-company" }`
 
+  * `toolbar` - controls whether the Tidewave toolbar is injected into HTML pages. Defaults to `true`
+
 ## Acknowledgements
 
 A thank you to Yorick Jacquin for the initial version of this project.

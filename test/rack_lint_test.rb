@@ -30,6 +30,19 @@ class TidewaveRackLintTest < Minitest::Test
     assert_lint_ok { @mock.get("/tidewave/config") }
   end
 
+  def test_app_endpoint_is_rack_conformant
+    assert_lint_ok { @mock.get("/tidewave/app") }
+  end
+
+  def test_toolbar_response_is_rack_conformant
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ "<html><head></head></html>" ] ] }
+    app = Rack::Lint.new(Tidewave.new(downstream, project_name: "lint", allow_remote_access: true))
+
+    response = Rack::MockRequest.new(app).get("/")
+
+    assert_includes response.body, "/tc/toolbar.js"
+  end
+
   def test_mcp_post_is_rack_conformant
     assert_lint_ok { @mock.post("/tidewave/mcp", input: @init) }
   end

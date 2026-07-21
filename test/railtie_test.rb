@@ -20,10 +20,17 @@ class TidewaveRailtieTest < Minitest::Test
     assert_equal "rails", options[:framework_type]
     assert_equal "TidewaveRailtieTestApp", options[:project_name]
     assert_equal({ id: "dashbit" }, options[:team])
+    assert_equal true, options[:toolbar]
     assert_same TidewaveRailtieTestApp::LOGGER, options[:logger]
     assert_equal TidewaveRailtieTestApp::ROOT, options[:root]
     assert_equal TidewaveRailtieTestApp::ROOT.join("log", "#{Rails.env}.log"), options[:log_file]
     assert_equal :sequel, options[:orm_adapter]
     assert_kind_of Proc, options[:before_reload]
+
+    directives = app.config.content_security_policy.directives
+    assert_equal [ "'self'" ], directives["default-src"]
+    assert_equal [ "'self'", "'unsafe-eval'", "https://example.test" ], directives["script-src"]
+    assert_equal [ "'self'", "https://example.test" ], directives["script-src-elem"]
+    refute directives.key?("frame-ancestors")
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "logger"
+require "uri"
 require "tidewave/configuration"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
@@ -24,6 +25,7 @@ class Tidewave
         framework_type: "rails",
         project_name: app.class.module_parent.name,
         team: tidewave_config.team,
+        toolbar: tidewave_config.toolbar,
         logger: tidewave_config.logger || Rails.logger,
         root: Rails.root,
         log_file: Rails.root.join("log", "#{Rails.env}.log"),
@@ -35,11 +37,22 @@ class Tidewave
         # If the user configured CSP, we need to alter it in dev
         # to allow TC to run browser_eval.
         app.config.content_security_policy.try do |content_security_policy|
-          content_security_policy.directives["script-src"].try do |script_src|
+          directives = content_security_policy.directives
+          script_src = directives["script-src"] || directives["default-src"]&.dup
+          client_uri = URI.parse(tidewave_config.client_url.to_s)
+          client_origin = client_uri.origin if client_uri.is_a?(URI::HTTP)
+
+          script_src.try do
             script_src << "'unsafe-eval'" unless script_src.include?("'unsafe-eval'")
+            script_src << client_origin if client_origin && !script_src.include?(client_origin)
+            directives["script-src"] = script_src
           end
 
-          content_security_policy.directives.delete("frame-ancestors")
+          directives["script-src-elem"].try do |script_src_elem|
+            script_src_elem << client_origin if client_origin && !script_src_elem.include?(client_origin)
+          end
+
+          directives.delete("frame-ancestors")
         end
       end
     end
