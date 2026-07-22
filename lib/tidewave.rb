@@ -296,7 +296,7 @@ class Tidewave
 
     <<~HTML
       <meta name="tidewave:config" content="#{CGI.escapeHTML(JSON.generate(payload))}" />
-      <script async type="module" src="#{CGI.escapeHTML("#{client_url}/tc/toolbar.js")}"></script>
+      <script async type="module" src="#{client_url}/tc/toolbar.js"></script>
     HTML
   end
 

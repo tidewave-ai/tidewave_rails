@@ -39,17 +39,16 @@ class Tidewave
         app.config.content_security_policy.try do |content_security_policy|
           directives = content_security_policy.directives
           script_src = directives["script-src"] || directives["default-src"]&.dup
-          client_uri = URI.parse(tidewave_config.client_url.to_s)
-          client_origin = client_uri.origin if client_uri.is_a?(URI::HTTP)
+          client_origin = URI.parse(tidewave_config.client_url.to_s).origin
 
           script_src.try do
             script_src << "'unsafe-eval'" unless script_src.include?("'unsafe-eval'")
-            script_src << client_origin if client_origin && !script_src.include?(client_origin)
+            script_src << client_origin unless script_src.include?(client_origin)
             directives["script-src"] = script_src
           end
 
           directives["script-src-elem"].try do |script_src_elem|
-            script_src_elem << client_origin if client_origin && !script_src_elem.include?(client_origin)
+            script_src_elem << client_origin unless script_src_elem.include?(client_origin)
           end
 
           directives.delete("frame-ancestors")
