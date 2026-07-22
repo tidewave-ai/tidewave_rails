@@ -12,9 +12,7 @@ Your agent will be able to use this MCP server to talk to your running Rails app
 
 This MCP server is an open-source component of [Tidewave](https://tidewave.ai), the agentic development environment for Rails and Phoenix.
 
-You can use this project as a standalone MCP server or integrated with the [Tidewave product](https://tidewave.ai).
-
-To use it as a standalone MCP server, follow the installation instructions below.
+You can use this project as a standalone MCP server or integrated with the [Tidewave product](https://tidewave.ai) by following the instructions below.
 
 ## Installation
 
@@ -117,6 +115,10 @@ Also, because it resolves the location from your running app instead of parsing 
 
 ## Troubleshooting
 
+### The Tidewave toolbar is missing
+
+This may happen if you are compressing your responses (gzip, brotli, etc) after the Tidewave middleware runs. Use `bin/rails middleware` and make sure Tidewave comes after `Rack::Deflater` or similar. Also look into your browser and terminal logs for any errors.
+
 ### Using multiple hosts/subdomains
 
 If you are using multiple hosts/subdomains during development, you must use `*.localhost`, as such domains are considered secure by browsers. Additionally, add the following to `config/initializers/development.rb`:
@@ -135,7 +137,7 @@ The above will allow your application to run embedded within Tidewave across mul
 
 ### Content security policy
 
-If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly. It also disables the `frame-ancestors` directive.
+If you have enabled Content-Security-Policy, Tidewave will automatically enable "unsafe-eval" under `script-src` in order for contextual browser testing to work correctly. It also disables the `frame-ancestors` directive. This is done only in the environments that Tidewave is loadead (development by default).
 
 ### Production Environment
 
