@@ -31,6 +31,11 @@ module TidewaveRailtieTestApp
     config.tidewave.preferred_orm = :sequel
     config.tidewave.logger = LOGGER
     config.tidewave.logger_middleware = ActionDispatch::ShowExceptions
+    config.content_security_policy do |policy|
+      policy.default_src :self
+      policy.frame_ancestors :self
+      policy.script_src_elem :self
+    end
   end
 end
 

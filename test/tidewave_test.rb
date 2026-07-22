@@ -2,6 +2,8 @@
 
 require "test_helper"
 require "tmpdir"
+require "rack/deflater"
+require "zlib"
 
 class TidewaveTest < Minitest::Test
   def setup
@@ -47,6 +49,239 @@ class TidewaveTest < Minitest::Test
     assert_equal "text/html", headers["content-type"]
     assert_includes body, "https://tidewave.ai/tc/tc.js"
     refute_includes body.downcase, "tidewave:config"
+  end
+
+  def test_app_route_returns_control_app_with_content_security_policy
+    status, headers, body = perform_request(@app, path: "/tidewave/app", origin: "http://example.com")
+
+    assert_equal 200, status
+    assert_equal "text/html", headers["content-type"]
+    assert_equal "base-uri 'self'; frame-ancestors 'self';", headers["content-security-policy"]
+    assert_includes body, "https://tidewave.ai/tc/control.js"
+    refute_includes body, "/tc/tc.js"
+  end
+
+  def test_injects_toolbar_into_html_responses
+    downstream = lambda do |_env|
+      body = "<html><head><title>Demo</title></head><body>Hello</body></html>"
+      headers = {
+        "content-type" => "text/html; charset=utf-8",
+        "content-length" => body.bytesize.to_s,
+        "etag" => '"original"'
+      }
+      [ 200, headers, [ body ] ]
+    end
+    app = Tidewave.new(
+      downstream,
+      allow_remote_access: true,
+      client_url: "http://localhost:4000",
+      project_name: "demo-app",
+      root: @tmpdir
+    )
+
+    _status, headers, body = perform_request(
+      app,
+      path: "/",
+      puma_socket: fake_socket(port: 5000)
+    )
+
+    assert_includes body, 'name="tidewave:config"'
+    assert_includes body, "http://localhost:4000/tc/toolbar.js"
+    assert_operator body.index("/tc/toolbar.js"), :<, body.downcase.index("</head>")
+    refute headers.key?("content-length")
+    refute headers.key?("etag")
+
+    payload = JSON.parse(CGI.unescapeHTML(body[/name="tidewave:config" content="([^"]+)"/, 1]))
+    assert_equal "demo-app", payload.dig("tidewave", "project_name")
+    assert_equal 5000, payload.dig("tidewave", "local_port")
+    assert_equal @tmpdir, payload["root"]
+  end
+
+  def test_config_includes_the_wsl_distribution
+    previous_wsl_distro = ENV["WSL_DISTRO_NAME"]
+    ENV["WSL_DISTRO_NAME"] = "Ubuntu-24.04"
+    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(app, path: "/tidewave/config")
+    assert_equal "Ubuntu-24.04", JSON.parse(body)["wsl_distro"]
+  ensure
+    ENV["WSL_DISTRO_NAME"] = previous_wsl_distro
+  end
+
+  def test_injects_toolbar_without_inspecting_request_headers
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ "<head></head>" ] ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(app, path: "/")
+
+    assert_includes body, "/tc/toolbar.js"
+  end
+
+  def test_does_not_inject_toolbar_when_disabled
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ "<head></head>" ] ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app", toolbar: false)
+
+    _status, _headers, body = perform_request(app, path: "/")
+
+    refute_includes body, "/tc/toolbar.js"
+  end
+
+  def test_does_not_inject_toolbar_into_non_html_or_encoded_responses
+    html = "<head></head>"
+
+    [
+      [ "text/plain", nil ],
+      [ "text/html", "gzip" ],
+      [ "text/html", "deflate" ],
+      [ "text/html", "br" ],
+      [ "text/html", "zstd" ],
+      [ "text/html", "identity, gzip" ]
+    ].each do |content_type, content_encoding|
+      headers = { "content-type" => content_type, "content-length" => html.bytesize.to_s, "etag" => '"original"' }
+      headers["content-encoding"] = content_encoding if content_encoding
+      downstream = ->(_env) { [ 200, headers, [ html ] ] }
+      app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+
+      _status, response_headers, body = perform_request(app, path: "/")
+
+      refute_includes body, "/tc/toolbar.js"
+      assert_equal html.bytesize.to_s, response_headers["content-length"]
+      assert_equal '"original"', response_headers["etag"]
+    end
+  end
+
+  def test_injects_toolbar_for_identity_encoded_responses_and_rack_2_header_names
+    headers = {
+      "Content-Type" => "text/html",
+      "Content-Encoding" => " Identity ",
+      "Content-Length" => "13",
+      "ETag" => '"original"'
+    }
+    downstream = ->(_env) { [ 200, headers, [ "<head></head>" ] ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+
+    _status, response_headers, body = perform_request(app, path: "/")
+
+    assert_includes body, "/tc/toolbar.js"
+    refute response_headers.keys.any? { |header| header.downcase == "content-length" }
+    refute response_headers.keys.any? { |header| header.downcase == "etag" }
+    assert_equal " Identity ", response_headers["Content-Encoding"]
+  end
+
+  def test_warns_once_when_encoded_html_prevents_toolbar_injection
+    warnings = []
+    logger = Struct.new(:warnings) do
+      def warn(message)
+        warnings << message
+      end
+    end.new(warnings)
+    headers = { "content-type" => "text/html", "content-encoding" => "gzip" }
+    downstream = ->(_env) { [ 200, headers, [ "encoded" ] ] }
+    app = Tidewave.new(
+      downstream,
+      allow_remote_access: true,
+      logger: logger,
+      project_name: "demo-app"
+    )
+
+    2.times { perform_request(app, path: "/") }
+
+    assert_equal [ Tidewave::ENCODED_HTML_WARNING ], warnings
+    assert_includes warnings.first, "Rack::Deflater"
+  end
+
+  def test_defers_body_consumption_and_injects_across_chunks
+    body_class = Class.new do
+      attr_reader :each_called, :closed
+
+      def each
+        @each_called = true
+        yield "<html><he"
+        yield "ad><title>Demo</title></he"
+        yield "ad><body>Hello</body></html>"
+      end
+
+      def close
+        @closed = true
+      end
+    end
+    original_body = body_class.new
+    downstream = lambda do |_env|
+      [ 200, { "content-type" => "text/html", "content-length" => "62", "etag" => '"original"' }, original_body ]
+    end
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+    env = Rack::MockRequest.env_for("/")
+
+    _status, headers, response_body = app.call(env)
+
+    refute original_body.each_called
+    refute original_body.closed
+    refute headers.key?("content-length")
+    refute headers.key?("etag")
+
+    body = collect_body(response_body)
+
+    assert original_body.each_called
+    assert original_body.closed
+    assert_includes body, "<title>Demo</title>"
+    assert_includes body, "/tc/toolbar.js"
+    assert_operator body.index("/tc/toolbar.js"), :<, body.downcase.index("</head>")
+  end
+
+  def test_preserves_html_without_a_closing_head
+    html = "<html><body>Hello</body></html>"
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ html ] ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(app, path: "/")
+
+    assert_equal html, body
+  end
+
+  def test_deflater_compresses_after_toolbar_injection
+    html = "<html><head></head><body>Hello</body></html>"
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ html ] ] }
+    tidewave = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+    app = Rack::Deflater.new(tidewave)
+
+    _status, headers, body = perform_request(app, path: "/", accept_encoding: "gzip")
+
+    assert_equal "gzip", headers["content-encoding"]
+    assert_includes gunzip(body), "/tc/toolbar.js"
+  end
+
+  def test_skips_toolbar_when_deflater_compresses_before_injection
+    html = "<html><head></head><body>Hello</body></html>"
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ html ] ] }
+    compressed_app = Rack::Deflater.new(downstream)
+    app = Tidewave.new(compressed_app, allow_remote_access: true, project_name: "demo-app")
+
+    _status, headers, body = perform_request(app, path: "/", accept_encoding: "gzip")
+
+    assert_equal "gzip", headers["content-encoding"]
+    refute_includes gunzip(body), "/tc/toolbar.js"
+  end
+
+  def test_closes_the_original_body
+    body_class = Class.new do
+      attr_reader :closed
+
+      def each
+        yield "<head></head>"
+      end
+
+      def close
+        @closed = true
+      end
+    end
+    original_body = body_class.new
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, original_body ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
+
+    _status, _headers, body = perform_request(app, path: "/")
+
+    assert_includes body, "/tc/toolbar.js"
+    assert original_body.closed
   end
 
   def test_unmatched_tidewave_routes_return_not_found
@@ -371,7 +606,7 @@ class TidewaveTest < Minitest::Test
     "\x1A\x45\xDF\xA3\x42\x82webmDATA".b
   end
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil, accept_encoding: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
@@ -383,6 +618,7 @@ class TidewaveTest < Minitest::Test
     env["HTTP_HOST"] = host if host
     env["SERVER_PORT"] = server_port if server_port
     env["puma.socket"] = puma_socket if puma_socket
+    env["HTTP_ACCEPT_ENCODING"] = accept_encoding if accept_encoding
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]
@@ -423,5 +659,9 @@ class TidewaveTest < Minitest::Test
     response.each { |part| body << part }
     response.close if response.respond_to?(:close)
     body
+  end
+
+  def gunzip(body)
+    Zlib::GzipReader.new(StringIO.new(body)).read
   end
 end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "cgi"
 require "ipaddr"
 require "json"
 require "pathname"
@@ -29,9 +30,50 @@ Dir[gem_tools_path].sort.each do |file|
 end
 
 class Tidewave
+  class ToolbarBody
+    def initialize(body, toolbar)
+      @body = body
+      @toolbar = toolbar
+      @closed = false
+    end
+
+    def each
+      return enum_for(:each) unless block_given?
+
+      pending = +""
+      injected = false
+
+      @body.each do |part|
+        if injected
+          yield part
+        else
+          pending << part
+
+          if closing_head = pending.downcase.index("</head>")
+            toolbar = @toolbar.dup.force_encoding(pending.encoding)
+            output = pending.insert(closing_head, toolbar)
+            pending = nil
+            injected = true
+            yield output
+          end
+        end
+      end
+
+      yield pending unless injected || pending.empty?
+    end
+
+    def close
+      return if @closed
+
+      @closed = true
+      @body.close if @body.respond_to?(:close)
+    end
+  end
+
   TIDEWAVE_ROUTE = "tidewave".freeze
   MCP_ROUTE = "mcp".freeze
   CONFIG_ROUTE = "config".freeze
+  APP_ROUTE = "app".freeze
   UPLOAD_ROUTE = "upload".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
   MAX_UPLOAD_SIZE = 10_000_000
@@ -47,12 +89,18 @@ class Tidewave
 
   INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
   INVALID_UPLOAD = "Bad Request: missing or invalid file parameter".freeze
+  ENCODED_HTML_WARNING = <<~TEXT.freeze
+    Tidewave could not inject the toolbar because the HTML response is encoded.
+
+    If you use Rack::Deflater or another compression middleware, place it before Tidewave in the middleware stack.
+  TEXT
 
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
     client_url: "https://tidewave.ai",
     framework_type: "rack",
-    team: {}
+    team: {},
+    toolbar: true
   }.freeze
 
   def initialize(app, options = {})
@@ -77,6 +125,8 @@ class Tidewave
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
         home_endpoint(request)
+      when [ "GET", [ TIDEWAVE_ROUTE, APP_ROUTE ] ]
+        app_endpoint(request)
       when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
         config_endpoint(request)
       when [ "POST", [ TIDEWAVE_ROUTE, MCP_ROUTE ] ]
@@ -89,7 +139,7 @@ class Tidewave
         path == [ TIDEWAVE_ROUTE, MCP_ROUTE ] ? method_not_allowed() : not_found()
       end
     else
-      strip_x_frame_options(@app.call(env))
+      inject_toolbar(request, strip_x_frame_options(@app.call(env)))
     end
   end
 
@@ -116,6 +166,25 @@ class Tidewave
     HTML
 
     [ 200, response_headers("text/html", body), [ body ] ]
+  end
+
+  def app_endpoint(_request)
+    client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
+    body = <<~HTML
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <script type="module" src="#{client_url}/tc/control.js"></script>
+        </head>
+        <body></body>
+      </html>
+    HTML
+
+    headers = response_headers("text/html", body)
+    headers["content-security-policy"] = "base-uri 'self'; frame-ancestors 'self';"
+    [ 200, headers, [ body ] ]
   end
 
   def config_endpoint(request)
@@ -167,8 +236,68 @@ class Tidewave
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
       "local_port" => local_port(request),
-      "tmp_dir" => TMP_DIR
+      "tmp_dir" => TMP_DIR,
+      "wsl_distro" => ENV["WSL_DISTRO_NAME"]
     }
+  end
+
+  def inject_toolbar(request, response)
+    status, headers, body = response
+    return response if @options[:toolbar] == false || !html_response?(headers)
+
+    if encoded_response?(headers)
+      warn_encoded_html
+      return response
+    end
+
+    return response unless body.respond_to?(:each)
+
+    delete_response_header(headers, "content-length")
+    delete_response_header(headers, "etag")
+    [ status, headers, ToolbarBody.new(body, toolbar_html(request)) ]
+  end
+
+  def html_response?(headers)
+    content_types = Array(response_header(headers, "content-type"))
+
+    content_types.any? { |content_type| content_type.to_s.downcase.start_with?("text/html") }
+  end
+
+  def encoded_response?(headers)
+    Array(response_header(headers, "content-encoding")).any? do |content_encoding|
+      content_encoding.to_s.split(",").any? do |encoding|
+        !encoding.strip.empty? && encoding.strip.downcase != "identity"
+      end
+    end
+  end
+
+  def response_header(headers, name)
+    key = headers.keys.find { |header| header.downcase == name }
+    headers[key] if key
+  end
+
+  def delete_response_header(headers, name)
+    headers.delete_if { |header, _value| header.downcase == name }
+  end
+
+  def warn_encoded_html
+    return if @warned_encoded_html
+
+    @warned_encoded_html = true
+    @logger&.warn(ENCODED_HTML_WARNING)
+  end
+
+  def toolbar_html(request)
+    client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
+    payload = {
+      "tidewave" => config_data(request),
+      "root" => @root.to_s
+    }
+
+    <<~HTML
+      <meta name="tidewave:config" content="#{CGI.escapeHTML(JSON.generate(payload))}" />
+      <script async type="module" src="#{client_url}/tc/toolbar.js"></script>
+    HTML
   end
 
   def upload_endpoint(request)
@@ -232,6 +361,7 @@ class Tidewave
   def origin_allowed_path?(path)
     [
       [ TIDEWAVE_ROUTE ],
+      [ TIDEWAVE_ROUTE, APP_ROUTE ],
       [ TIDEWAVE_ROUTE, CONFIG_ROUTE ],
       [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
     ].include?(path)
