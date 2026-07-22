@@ -236,8 +236,7 @@ class Tidewave
       "team" => @options[:team] || {},
       "tidewave_version" => VERSION,
       "local_port" => local_port(request),
-      "tmp_dir" => TMP_DIR,
-      "wsl_distro" => ENV["WSL_DISTRO_NAME"]
+      "tmp_dir" => TMP_DIR
     }
   end
 
@@ -291,7 +290,9 @@ class Tidewave
     client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
     payload = {
       "tidewave" => config_data(request),
-      "root" => @root.to_s
+      "root" => @root.to_s,
+      "wsl_distro" => ENV["WSL_DISTRO_NAME"],
+      "framework" => {}
     }
 
     <<~HTML

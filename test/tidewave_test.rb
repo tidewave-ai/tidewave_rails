@@ -95,15 +95,20 @@ class TidewaveTest < Minitest::Test
     assert_equal "demo-app", payload.dig("tidewave", "project_name")
     assert_equal 5000, payload.dig("tidewave", "local_port")
     assert_equal @tmpdir, payload["root"]
+    assert_equal({}, payload["framework"])
   end
 
-  def test_config_includes_the_wsl_distribution
+  def test_toolbar_config_includes_the_wsl_distribution_at_the_top_level
     previous_wsl_distro = ENV["WSL_DISTRO_NAME"]
     ENV["WSL_DISTRO_NAME"] = "Ubuntu-24.04"
-    app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "demo-app")
+    downstream = ->(_env) { [ 200, { "content-type" => "text/html" }, [ "<head></head>" ] ] }
+    app = Tidewave.new(downstream, allow_remote_access: true, project_name: "demo-app")
 
-    _status, _headers, body = perform_request(app, path: "/tidewave/config")
-    assert_equal "Ubuntu-24.04", JSON.parse(body)["wsl_distro"]
+    _status, _headers, body = perform_request(app, path: "/")
+    payload = JSON.parse(CGI.unescapeHTML(body[/name="tidewave:config" content="([^"]+)"/, 1]))
+
+    assert_equal "Ubuntu-24.04", payload["wsl_distro"]
+    refute payload["tidewave"].key?("wsl_distro")
   ensure
     ENV["WSL_DISTRO_NAME"] = previous_wsl_distro
   end
