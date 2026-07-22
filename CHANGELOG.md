@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.8.0 (2026-07-22)
+
+* Add the Tidewave Toolbar
+* Align minor version across Tidewave packages
+
 ## v0.5.2 (2026-07-09)
 
 * Improve OpenCode and Rack 3 compatibility
