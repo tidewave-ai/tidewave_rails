@@ -4,6 +4,7 @@ require "test_helper"
 
 class TidewaveMcpTest < Minitest::Test
   DEFAULT_TOOL_NAMES = %w[
+    browser_eval
     get_docs
     get_source_location
     project_eval
@@ -13,7 +14,12 @@ class TidewaveMcpTest < Minitest::Test
 
   def setup
     @downstream_app = ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] }
-    @app = Tidewave.new(@downstream_app, allow_remote_access: true, project_name: "test-app")
+    @app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      project_name: "test-app",
+      browser_control: Tidewave::BrowserControl.new
+    )
   end
 
   def test_ping_returns_jsonrpc_response
@@ -332,7 +338,8 @@ class TidewaveMcpTest < Minitest::Test
       @downstream_app,
       allow_remote_access: true,
       project_name: "test-app",
-      log_file: __FILE__
+      log_file: __FILE__,
+      browser_control: Tidewave::BrowserControl.new
     )
 
     status, _headers, body = perform_request(
@@ -345,6 +352,55 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal 200, status
     tools = JSON.parse(body).dig("result", "tools")
     assert_equal OPTIONAL_TOOL_NAMES, tools.map { |tool| tool["name"] }.sort
+  end
+
+  def test_tools_list_excludes_browser_tools_on_opt_out
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp?include_browser_tools=false",
+      method: "POST",
+      body: JSON.generate({ jsonrpc: "2.0", method: "tools/list", id: 1 })
+    )
+
+    assert_equal 200, status
+    tools = JSON.parse(body).dig("result", "tools")
+    assert_equal (DEFAULT_TOOL_NAMES - [ "browser_eval" ]).sort, tools.map { |tool| tool["name"] }.sort
+  end
+
+  def test_browser_tools_are_not_callable_on_opt_out
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp?include_browser_tools=false",
+      method: "POST",
+      body: JSON.generate({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        id: 1,
+        params: { name: "browser_eval", arguments: { action: "eval" } }
+      })
+    )
+
+    assert_equal 200, status
+    assert_equal "Tool 'browser_eval' not found", JSON.parse(body).dig("error", "message")
+  end
+
+  def test_browser_eval_reports_an_invalid_sid
+    status, _headers, body = perform_request(
+      @app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        id: 1,
+        params: { name: "browser_eval", arguments: { action: "eval", args: { code: "1" }, sid: "nosuffix" } }
+      })
+    )
+
+    assert_equal 200, status
+    result = JSON.parse(body)["result"]
+    assert result["isError"]
+    assert_includes result.dig("content", 0, "text"), "Invalid sid"
   end
 
   def test_unknown_tool_returns_method_not_found
@@ -386,13 +442,11 @@ class TidewaveMcpTest < Minitest::Test
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1")
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
       "REMOTE_ADDR" => remote_addr)
-
-    env["HTTP_ORIGIN"] = origin if origin
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]
@@ -477,13 +531,11 @@ class TidewaveMcpSqlQueryTest < TidewaveActiveRecordTestCase
 
   private
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1")
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
       "REMOTE_ADDR" => remote_addr)
-
-    env["HTTP_ORIGIN"] = origin if origin
 
     status, headers, response = app.call(env)
     [ status, headers, collect_body(response) ]

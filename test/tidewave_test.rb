@@ -51,14 +51,20 @@ class TidewaveTest < Minitest::Test
     refute_includes body.downcase, "tidewave:config"
   end
 
-  def test_app_route_returns_control_app_with_content_security_policy
-    status, headers, body = perform_request(@app, path: "/tidewave/app", origin: "http://example.com")
+  def test_connect_route_returns_control_app_with_content_security_policy
+    status, headers, body = perform_request(@app, path: "/tidewave/connect")
 
     assert_equal 200, status
     assert_equal "text/html", headers["content-type"]
     assert_equal "base-uri 'self'; frame-ancestors 'self';", headers["content-security-policy"]
     assert_includes body, "https://tidewave.ai/tc/control.js"
     refute_includes body, "/tc/tc.js"
+
+    meta_content = body[/name="tidewave:config" content="([^"]*)"/, 1]
+    payload = JSON.parse(CGI.unescapeHTML(meta_content))
+    assert_equal "test-app", payload.dig("tidewave", "project_name")
+    assert payload.key?("root")
+    assert payload.key?("framework")
   end
 
   def test_injects_toolbar_into_html_responses
@@ -423,44 +429,57 @@ class TidewaveTest < Minitest::Test
   end
 
   def test_mcp_and_unmatched_tidewave_routes_refuse_requests_with_origin_header
-    status, _headers, _body = perform_request(@app, path: "/tidewave/other", origin: "http://localhost:4001")
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave/other",
+      origin: "http://example.org"
+    )
     assert_equal 403, status
 
+    # Even same-origin browser requests are refused
     status, _headers, _body = perform_request(
       @app,
       path: "/tidewave/mcp",
       method: "POST",
-      origin: "http://localhost:4001",
+      origin: "http://example.org",
+      host: "example.org",
       body: JSON.generate({ jsonrpc: "2.0", method: "ping", id: 1 })
     )
     assert_equal 403, status
   end
 
-  def test_config_allows_requests_with_origin_header_and_cors
-    status, headers, body = perform_request(@app, path: "/tidewave/config", origin: "http://localhost:4001")
+  def test_config_allows_cross_site_requests_with_cors
+    status, headers, body = perform_request(
+      @app,
+      path: "/tidewave/config",
+      fetch_site: "cross-site",
+      fetch_mode: "cors"
+    )
 
     assert_equal 200, status
     assert_equal "*", headers["access-control-allow-origin"]
     assert_includes body, "\"tidewave_version\""
   end
 
-  def test_root_allows_any_origin
-    status, _headers, _body = perform_request(@app, path: "/tidewave", origin: "http://example.com")
-    assert_equal 200, status
-
-    status, _headers, _body = perform_request(@app, path: "/tidewave", origin: "http://localhost:4000")
+  def test_pages_allow_cross_site_navigations
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave",
+      fetch_site: "cross-site",
+      fetch_mode: "navigate",
+      fetch_dest: "document"
+    )
     assert_equal 200, status
   end
 
-  def test_upload_endpoint_accepts_valid_screenshot_with_origin
+  def test_upload_endpoint_accepts_same_origin_requests
     status, headers, body = perform_multipart_upload(
       @app,
       type: "screenshot",
       filename: "capture.png",
       content_type: "image/png",
       content: valid_png,
-      origin: "http://example.test:3000",
-      host: "example.test:3000"
+      fetch_site: "same-origin"
     )
 
     expected_path = File.join(@tmpdir, "tmp", "tidewave", "screenshots", "capture.png")
@@ -470,6 +489,49 @@ class TidewaveTest < Minitest::Test
     assert_equal "application/json", headers["content-type"]
     assert_equal({ "status" => "ok", "path" => expected_response_path }, JSON.parse(body))
     assert_equal valid_png, File.binread(expected_path)
+  end
+
+  def test_upload_endpoint_rejects_cross_site_requests
+    status, _headers, body = perform_multipart_upload(
+      @app,
+      type: "screenshot",
+      filename: "capture.png",
+      content_type: "image/png",
+      content: valid_png,
+      fetch_site: "cross-site"
+    )
+
+    assert_equal 403, status
+    assert_includes body, "same origin"
+  end
+
+  def test_upload_endpoint_rejects_same_site_requests
+    # Same-site is still a different origin (such as another subdomain
+    # or port)
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave/upload",
+      method: "POST",
+      fetch_site: "same-site",
+      fetch_mode: "cors"
+    )
+
+    assert_equal 403, status
+  end
+
+  def test_upload_endpoint_rejects_cross_site_form_submissions
+    # Form submissions are navigations, but only GET navigations may
+    # cross sites
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave/upload",
+      method: "POST",
+      fetch_site: "cross-site",
+      fetch_mode: "navigate",
+      fetch_dest: "document"
+    )
+
+    assert_equal 403, status
   end
 
   def test_upload_endpoint_accepts_valid_recording_without_origin
@@ -533,7 +595,7 @@ class TidewaveTest < Minitest::Test
     end
   end
 
-  def test_no_origin_header_allowed
+  def test_requests_without_fetch_metadata_are_allowed
     status, headers, body = perform_request(@app, path: "/tidewave/config")
 
     assert_equal 200, status
@@ -565,7 +627,7 @@ class TidewaveTest < Minitest::Test
 
   private
 
-  def perform_multipart_upload(app, type:, filename:, content_type:, content:, origin: nil, host: "example.test")
+  def perform_multipart_upload(app, type:, filename:, content_type:, content:, fetch_site: nil, host: "example.test")
     body, request_content_type = multipart_body(
       type: type,
       filename: filename,
@@ -579,7 +641,7 @@ class TidewaveTest < Minitest::Test
       method: "POST",
       body: body,
       content_type: request_content_type,
-      origin: origin,
+      fetch_site: fetch_site,
       host: host
     )
   end
@@ -611,7 +673,7 @@ class TidewaveTest < Minitest::Test
     "\x1A\x45\xDF\xA3\x42\x82webmDATA".b
   end
 
-  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil, accept_encoding: nil)
+  def perform_request(app, path:, method: "GET", body: nil, remote_addr: "127.0.0.1", origin: nil, fetch_site: nil, fetch_mode: nil, fetch_dest: nil, forwarded_for: nil, host: nil, server_port: nil, puma_socket: nil, content_type: nil, accept_encoding: nil)
     env = Rack::MockRequest.env_for(path,
       method: method,
       input: body.to_s,
@@ -619,6 +681,9 @@ class TidewaveTest < Minitest::Test
 
     env["CONTENT_TYPE"] = content_type if content_type
     env["HTTP_ORIGIN"] = origin if origin
+    env["HTTP_SEC_FETCH_SITE"] = fetch_site if fetch_site
+    env["HTTP_SEC_FETCH_MODE"] = fetch_mode if fetch_mode
+    env["HTTP_SEC_FETCH_DEST"] = fetch_dest if fetch_dest
     env["HTTP_X_FORWARDED_FOR"] = forwarded_for if forwarded_for
     env["HTTP_HOST"] = host if host
     env["SERVER_PORT"] = server_port if server_port

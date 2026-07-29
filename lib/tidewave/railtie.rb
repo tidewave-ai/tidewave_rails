@@ -2,6 +2,7 @@
 
 require "logger"
 require "uri"
+require "tidewave/browser_control"
 require "tidewave/configuration"
 require "tidewave/exceptions_middleware"
 require "tidewave/quiet_requests_middleware"
@@ -9,6 +10,15 @@ require "tidewave/quiet_requests_middleware"
 class Tidewave
   class Railtie < Rails::Railtie
     config.tidewave = Tidewave::Configuration.new()
+
+    def self.cable_config(app)
+      return nil unless app.root.join("config", "cable.yml").exist?
+
+      app.config_for(:cable)&.to_h&.deep_stringify_keys
+    rescue StandardError => error
+      Rails.logger&.warn("Tidewave could not load config/cable.yml: #{error.message}")
+      nil
+    end
 
     initializer "tidewave.setup" do |app|
       unless app.config.enable_reloading
@@ -21,6 +31,7 @@ class Tidewave
         ActionDispatch::Callbacks,
         Tidewave,
         allow_remote_access: tidewave_config.allow_remote_access,
+        browser_control: Tidewave::BrowserControl.new(cable: tidewave_config.cable || Railtie.cable_config(app)),
         client_url: tidewave_config.client_url,
         framework_type: "rails",
         project_name: app.class.module_parent.name,

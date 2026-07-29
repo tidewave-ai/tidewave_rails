@@ -20,5 +20,7 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "LICENSE", "README.md"]
   end
 
+  spec.required_ruby_version = ">= 3.2"
+
   spec.add_dependency "rack", ">= 2.0"
 end
