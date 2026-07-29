@@ -229,13 +229,17 @@ class Tidewave
     # Same-origin request or user-originated request.
     return true if fetch_site.nil? || [ "same-origin", "none" ].include?(fetch_site)
 
+    # Allow any origin for /tidewave. In particular, the IDE loads
+    # it in a cross-origin iframe.
+    return true if path == [ TIDEWAVE_ROUTE ]
+
     # /config contains metadata for discovery and it is safe to allow
     # any origin.
     return true if path == [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
 
     # Allow regular cross-site top-level navigations, such as following
-    # a link to the /tidewave page. Form submissions are navigations too,
-    # hence the GET check.
+    # a link to the /tidewave/connect page. Form submissions are
+    # navigations too, hence the GET check.
     return true if request.get? && fetch_mode == "navigate" && fetch_dest == "document"
 
     false

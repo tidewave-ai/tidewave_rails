@@ -461,10 +461,22 @@ class TidewaveTest < Minitest::Test
     assert_includes body, "\"tidewave_version\""
   end
 
-  def test_pages_allow_cross_site_navigations
+  def test_home_page_allows_any_cross_site_requests
+    # Including embedding in a cross-origin iframe
     status, _headers, _body = perform_request(
       @app,
       path: "/tidewave",
+      fetch_site: "cross-site",
+      fetch_mode: "navigate",
+      fetch_dest: "iframe"
+    )
+    assert_equal 200, status
+  end
+
+  def test_pages_allow_cross_site_navigations
+    status, _headers, _body = perform_request(
+      @app,
+      path: "/tidewave/connect",
       fetch_site: "cross-site",
       fetch_mode: "navigate",
       fetch_dest: "document"
