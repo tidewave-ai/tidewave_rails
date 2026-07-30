@@ -6,7 +6,6 @@ require "ipaddr"
 require "json"
 require "pathname"
 require "rack/request"
-require "uri"
 require "tidewave/version"
 require "tidewave/tool"
 require "tidewave/database_adapter"
@@ -73,8 +72,9 @@ class Tidewave
   TIDEWAVE_ROUTE = "tidewave".freeze
   MCP_ROUTE = "mcp".freeze
   CONFIG_ROUTE = "config".freeze
-  APP_ROUTE = "app".freeze
+  CONNECT_ROUTE = "connect".freeze
   UPLOAD_ROUTE = "upload".freeze
+  WS_ROUTE = "ws".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
   MAX_UPLOAD_SIZE = 10_000_000
   ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
@@ -87,6 +87,7 @@ class Tidewave
     If you really want to allow remote connections, configure Tidewave with the `allow_remote_access: true` option
   TEXT
 
+  INVALID_FETCH_SITE = "For security reasons, Tidewave only accepts requests from the same origin your web app is running on.".freeze
   INVALID_ORIGIN = "For security reasons, Tidewave does not accept requests with an origin header for this endpoint.".freeze
   INVALID_UPLOAD = "Bad Request: missing or invalid file parameter".freeze
   ENCODED_HTML_WARNING = <<~TEXT.freeze
@@ -97,6 +98,7 @@ class Tidewave
 
   DEFAULT_OPTIONS = {
     allow_remote_access: false,
+    browser_control: nil,
     client_url: "https://tidewave.ai",
     framework_type: "rack",
     team: {},
@@ -110,6 +112,7 @@ class Tidewave
 
     @logger = @options[:logger]
     @root = @options[:root] ? Pathname.new(@options[:root].to_s) : Pathname.pwd
+    @browser_control = @options[:browser_control]
     @tools = build_tool_registry
   end
 
@@ -120,12 +123,19 @@ class Tidewave
     if path[0] == TIDEWAVE_ROUTE
       return forbidden(INVALID_IP) unless valid_client_ip?(request)
 
-      return forbidden(INVALID_ORIGIN) if request.get_header("HTTP_ORIGIN") && !origin_allowed_path?(path)
+      origin_error = check_origin(request, path)
+      return origin_error if origin_error
 
       case [ request.request_method, path ]
       when [ "GET", [ TIDEWAVE_ROUTE ] ]
         home_endpoint(request)
-      when [ "GET", [ TIDEWAVE_ROUTE, APP_ROUTE ] ]
+      when [ "GET", [ TIDEWAVE_ROUTE, WS_ROUTE ] ]
+        unless @browser_control
+          raise "this route is currently only supported for Rails"
+        end
+
+        @browser_control.call(request.env)
+      when [ "GET", [ TIDEWAVE_ROUTE, CONNECT_ROUTE ] ]
         app_endpoint(request)
       when [ "GET", [ TIDEWAVE_ROUTE, CONFIG_ROUTE ] ]
         config_endpoint(request)
@@ -168,7 +178,7 @@ class Tidewave
     [ 200, response_headers("text/html", body), [ body ] ]
   end
 
-  def app_endpoint(_request)
+  def app_endpoint(request)
     client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
     body = <<~HTML
       <!DOCTYPE html>
@@ -176,6 +186,7 @@ class Tidewave
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          #{config_meta_tag(request)}
           <script type="module" src="#{client_url}/tc/control.js"></script>
         </head>
         <body></body>
@@ -191,13 +202,53 @@ class Tidewave
     json_response(config_data(request), headers: { "access-control-allow-origin" => "*" })
   end
 
+  # Returns a 403 response when the request is not allowed for the given
+  # path, nil otherwise.
+  def check_origin(request, path)
+    case path
+    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+      # Allow any origin:
+      # * /tidewave is loaded by IDE in a cross-origin iframe
+      # * /config contains metadata for discovery
+      nil
+    when [ TIDEWAVE_ROUTE, CONNECT_ROUTE ], [ TIDEWAVE_ROUTE, WS_ROUTE ], [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
+      # Browser-facing routes are subject to the fetch metadata policy
+      forbidden(INVALID_FETCH_SITE) unless allowed_fetch_site?(request)
+    else
+      # The MCP endpoint (and everything else) is meant for MCP clients
+      # and never the browser, so we reject even same-origin browser
+      # requests (browsers set the origin header on all POST requests)
+      forbidden(INVALID_ORIGIN) unless request.get_header("HTTP_ORIGIN").nil?
+    end
+  end
+
+  def allowed_fetch_site?(request)
+    # Note that these checks do not prevent DNS rebinding, but Rails
+    # already guards against it through the HostAuthorization middleware.
+
+    fetch_site = request.get_header("HTTP_SEC_FETCH_SITE")
+    fetch_mode = request.get_header("HTTP_SEC_FETCH_MODE")
+    fetch_dest = request.get_header("HTTP_SEC_FETCH_DEST")
+
+    # Same-origin request or user-originated request.
+    return true if fetch_site.nil? || [ "same-origin", "none" ].include?(fetch_site)
+
+    # Allow regular cross-site top-level navigations, such as following
+    # a link to the /tidewave/connect page. Form submissions are
+    # navigations too, hence the GET check.
+    return true if request.get? && fetch_mode == "navigate" && fetch_dest == "document"
+
+    false
+  end
+
   def mcp_endpoint(request)
     message = JSON.parse(request.body.read)
+    context = mcp_context(request)
 
     if message.is_a?(Array)
-      handle_mcp_batch(message)
+      handle_mcp_batch(message, context)
     else
-      handle_mcp_single(message)
+      handle_mcp_single(message, context)
     end
   rescue JSON::ParserError
     jsonrpc_error_response(nil, -32700, "Parse error", status: 400)
@@ -206,26 +257,36 @@ class Tidewave
     jsonrpc_error_response(nil, -32603, "Internal error")
   end
 
-  def handle_mcp_single(message)
+  def mcp_context(request)
+    tools = @tools
+
+    if request.GET["include_browser_tools"] == "false"
+      tools = tools.reject { |_name, tool| tool.respond_to?(:browser_tool?) && tool.browser_tool? }
+    end
+
+    { tools: tools, url: request.base_url }
+  end
+
+  def handle_mcp_single(message, context)
     validation_error = validate_jsonrpc_message(message)
     return jsonrpc_error_response(nil, -32600, validation_error, status: 400) if validation_error
 
-    response = handle_mcp_message(message)
+    response = handle_mcp_message(message, context)
     response.nil? ? accepted_response : json_response(response)
   end
 
-  def handle_mcp_batch(messages)
+  def handle_mcp_batch(messages, context)
     return jsonrpc_error_response(nil, -32600, "Invalid Request", status: 400) if messages.empty?
 
-    responses = messages.map { |message| handle_mcp_batch_message(message) }.compact
+    responses = messages.map { |message| handle_mcp_batch_message(message, context) }.compact
     responses.empty? ? accepted_response : json_response(responses)
   end
 
-  def handle_mcp_batch_message(message)
+  def handle_mcp_batch_message(message, context)
     validation_error = validate_jsonrpc_message(message)
     return jsonrpc_error_response_body(nil, -32600, validation_error) if validation_error
 
-    handle_mcp_message(message)
+    handle_mcp_message(message, context)
   end
 
   def config_data(request)
@@ -288,6 +349,14 @@ class Tidewave
 
   def toolbar_html(request)
     client_url = @options[:client_url].to_s.sub(%r{/\z}, "")
+
+    <<~HTML
+      #{config_meta_tag(request)}
+      <script async type="module" src="#{client_url}/tc/toolbar.js"></script>
+    HTML
+  end
+
+  def config_meta_tag(request)
     payload = {
       "tidewave" => config_data(request),
       "root" => @root.to_s,
@@ -295,10 +364,7 @@ class Tidewave
       "framework" => {}
     }
 
-    <<~HTML
-      <meta name="tidewave:config" content="#{CGI.escapeHTML(JSON.generate(payload))}" />
-      <script async type="module" src="#{client_url}/tc/toolbar.js"></script>
-    HTML
+    %(<meta name="tidewave:config" content="#{CGI.escapeHTML(JSON.generate(payload))}" />)
   end
 
   def upload_endpoint(request)
@@ -357,15 +423,6 @@ class Tidewave
       "content-type" => content_type,
       "content-length" => body.bytesize.to_s
     }
-  end
-
-  def origin_allowed_path?(path)
-    [
-      [ TIDEWAVE_ROUTE ],
-      [ TIDEWAVE_ROUTE, APP_ROUTE ],
-      [ TIDEWAVE_ROUTE, CONFIG_ROUTE ],
-      [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
-    ].include?(path)
   end
 
   def local_port(request)
@@ -466,7 +523,7 @@ class Tidewave
   # Returns the JSON-RPC response for a request, or nil for messages that
   # must not be replied to (notifications and client-sent responses), which
   # the transport acknowledges with 202 Accepted.
-  def handle_mcp_message(message)
+  def handle_mcp_message(message, context)
     return nil unless message.key?("method") && message.key?("id")
 
     method = message["method"]
@@ -477,11 +534,11 @@ class Tidewave
     when "ping"
       jsonrpc_success_response_body(request_id, {})
     when "initialize"
-      handle_initialize(request_id, params)
+      handle_initialize(request_id, params, context)
     when "tools/list"
-      jsonrpc_success_response_body(request_id, { "tools" => tool_definitions })
+      jsonrpc_success_response_body(request_id, { "tools" => tool_definitions(context) })
     when "tools/call"
-      handle_tool_call(request_id, params)
+      handle_tool_call(request_id, params, context)
     when "prompts/list"
       jsonrpc_success_response_body(request_id, { "prompts" => [] })
     when "resources/list"
@@ -501,7 +558,7 @@ class Tidewave
     end
   end
 
-  def handle_initialize(request_id, params)
+  def handle_initialize(request_id, params, context)
     client_version = params["protocolVersion"]
     return jsonrpc_error_response_body(request_id, -32602, "Protocol version is required") if client_version.nil? || client_version.empty?
 
@@ -515,20 +572,20 @@ class Tidewave
         "name" => "tidewave",
         "version" => VERSION
       },
-      "tools" => tool_definitions
+      "tools" => tool_definitions(context)
     })
   end
 
-  def handle_tool_call(request_id, params)
+  def handle_tool_call(request_id, params, context)
     tool_name = params["name"]
     arguments = params["arguments"].is_a?(Hash) ? params["arguments"] : {}
 
     return jsonrpc_error_response_body(request_id, -32602, "Tool name is required") if tool_name.nil? || tool_name.empty?
 
-    tool = @tools[tool_name]
+    tool = context[:tools][tool_name]
     return jsonrpc_error_response_body(request_id, -32601, "Tool '#{tool_name}' not found") if tool.nil?
 
-    result = tool.validate_and_call(arguments)
+    result = tool.validate_and_call(arguments, context)
     jsonrpc_success_response_body(request_id, tool_result(result))
   rescue StandardError => error
     @logger&.error("Tool execution error: #{error.message}")
@@ -558,8 +615,8 @@ class Tidewave
     }
   end
 
-  def tool_definitions
-    @tools.values.map(&:definition)
+  def tool_definitions(context)
+    context[:tools].values.map(&:definition)
   end
 
   def tool_error_result(message)
@@ -571,10 +628,9 @@ class Tidewave
 
   def tool_result(result)
     if result.is_a?(Hash)
-      {
-        "content" => [ text_content(JSON.generate(result)) ],
-        "structuredContent" => result
-      }
+      # The tool returned a complete MCP result (browser_eval passes the
+      # browser's reply, including isError, through verbatim)
+      result
     else
       {
         "content" => [ text_content(result.to_s) ]

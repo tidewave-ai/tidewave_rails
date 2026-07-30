@@ -17,6 +17,7 @@ group :development, :test do
   gem "pry"
   gem "appraisal"
   gem "railties", ">= 7.1.0"
+  gem "actioncable", ">= 7.1.0"
   gem "activerecord", ">= 7.1.0"
   gem "sequel"
 end

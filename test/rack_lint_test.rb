@@ -30,8 +30,8 @@ class TidewaveRackLintTest < Minitest::Test
     assert_lint_ok { @mock.get("/tidewave/config") }
   end
 
-  def test_app_endpoint_is_rack_conformant
-    assert_lint_ok { @mock.get("/tidewave/app") }
+  def test_connect_endpoint_is_rack_conformant
+    assert_lint_ok { @mock.get("/tidewave/connect") }
   end
 
   def test_toolbar_response_is_rack_conformant

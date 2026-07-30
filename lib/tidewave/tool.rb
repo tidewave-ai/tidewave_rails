@@ -24,7 +24,7 @@ class Tidewave
       raise NotImplementedError, "#{self.class} must implement #call"
     end
 
-    def validate_and_call(arguments)
+    def validate_and_call(arguments, context = {})
       arguments ||= {}
 
       unless arguments.is_a?(Hash)
@@ -36,7 +36,14 @@ class Tidewave
       # `minLength`, `maxLength`, `enum`, and `pattern` remain descriptive until
       # Tidewave grows broader schema support.
       validate_schema(arguments, definition.fetch("inputSchema", {}))
-      call(arguments)
+
+      # Tools opt into request context (such as the request URL) by
+      # accepting a second argument.
+      if method(:call).arity.abs >= 2
+        call(arguments, context)
+      else
+        call(arguments)
+      end
     end
 
     private
