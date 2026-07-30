@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v0.8.1 (2026-07-30)
+
+* Add Tidewave Connect
+
 ## v0.8.0 (2026-07-22)
 
 * Add the Tidewave Toolbar

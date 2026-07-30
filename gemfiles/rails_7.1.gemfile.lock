@@ -1,7 +1,7 @@
 PATH
   remote: ..
   specs:
-    tidewave (0.8.0)
+    tidewave (0.8.1)
       rack (>= 2.0)
 
 GEM
@@ -271,6 +271,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  actioncable (>= 7.1.0)
   activerecord (>= 7.1.0)
   appraisal
   pry
