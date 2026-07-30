@@ -206,10 +206,14 @@ class Tidewave
   # path, nil otherwise.
   def check_origin(request, path)
     case path
-    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONNECT_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ],
-         [ TIDEWAVE_ROUTE, WS_ROUTE ], [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
+    when [ TIDEWAVE_ROUTE ], [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
+      # Allow any origin:
+      # * /tidewave is loaded by IDE in a cross-origin iframe
+      # * /config contains metadata for discovery
+      nil
+    when [ TIDEWAVE_ROUTE, CONNECT_ROUTE ], [ TIDEWAVE_ROUTE, WS_ROUTE ], [ TIDEWAVE_ROUTE, UPLOAD_ROUTE ]
       # Browser-facing routes are subject to the fetch metadata policy
-      forbidden(INVALID_FETCH_SITE) unless allowed_fetch_site?(request, path)
+      forbidden(INVALID_FETCH_SITE) unless allowed_fetch_site?(request)
     else
       # The MCP endpoint (and everything else) is meant for MCP clients
       # and never the browser, so we reject even same-origin browser
@@ -218,7 +222,7 @@ class Tidewave
     end
   end
 
-  def allowed_fetch_site?(request, path)
+  def allowed_fetch_site?(request)
     # Note that these checks do not prevent DNS rebinding, but Rails
     # already guards against it through the HostAuthorization middleware.
 
@@ -228,14 +232,6 @@ class Tidewave
 
     # Same-origin request or user-originated request.
     return true if fetch_site.nil? || [ "same-origin", "none" ].include?(fetch_site)
-
-    # Allow any origin for /tidewave. In particular, the IDE loads
-    # it in a cross-origin iframe.
-    return true if path == [ TIDEWAVE_ROUTE ]
-
-    # /config contains metadata for discovery and it is safe to allow
-    # any origin.
-    return true if path == [ TIDEWAVE_ROUTE, CONFIG_ROUTE ]
 
     # Allow regular cross-site top-level navigations, such as following
     # a link to the /tidewave/connect page. Form submissions are
@@ -265,7 +261,7 @@ class Tidewave
     tools = @tools
 
     if request.GET["include_browser_tools"] == "false"
-      tools = tools.reject { |_name, tool| tool.browser_tool? }
+      tools = tools.reject { |_name, tool| tool.respond_to?(:browser_tool?) && tool.browser_tool? }
     end
 
     { tools: tools, url: request.base_url }

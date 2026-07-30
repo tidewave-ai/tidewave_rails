@@ -4,7 +4,7 @@ require "test_helper"
 
 class TidewaveBrowserControlTest < Minitest::Test
   def setup
-    @control = Tidewave::BrowserControl.new(ack_timeout: 0.2)
+    @control = Tidewave::BrowserControl.new(cable: { "adapter" => "async" }, ack_timeout: 0.2)
   end
 
   def test_run_with_invalid_sid
@@ -117,7 +117,7 @@ end
 
 class TidewaveBrowserControlChannelTest < Minitest::Test
   def setup
-    @control = Tidewave::BrowserControl.new(ack_timeout: 0.2)
+    @control = Tidewave::BrowserControl.new(cable: { "adapter" => "async" }, ack_timeout: 0.2)
   end
 
   def test_hello_registers_the_client_and_confirms
@@ -275,7 +275,7 @@ class TidewaveBrowserControlEndpointTest < Minitest::Test
       downstream,
       allow_remote_access: true,
       project_name: "test-app",
-      browser_control: Tidewave::BrowserControl.new
+      browser_control: Tidewave::BrowserControl.new(cable: { "adapter" => "async" })
     )
   end
 

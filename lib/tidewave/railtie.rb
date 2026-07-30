@@ -12,12 +12,18 @@ class Tidewave
     config.tidewave = Tidewave::Configuration.new()
 
     def self.cable_config(app)
-      return nil unless app.root.join("config", "cable.yml").exist?
+      cable =
+        begin
+          if app.root.join("config", "cable.yml").exist?
+            app.config_for(:cable)&.to_h&.deep_stringify_keys
+          end
+        rescue StandardError => error
+          Rails.logger&.warn("Tidewave could not load config/cable.yml: #{error.message}")
+          nil
+        end
 
-      app.config_for(:cable)&.to_h&.deep_stringify_keys
-    rescue StandardError => error
-      Rails.logger&.warn("Tidewave could not load config/cable.yml: #{error.message}")
-      nil
+      # Default to the in-process async adapter, as Rails does in development.
+      cable.presence || { "adapter" => "async" }
     end
 
     initializer "tidewave.setup" do |app|

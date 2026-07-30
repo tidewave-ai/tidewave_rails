@@ -18,7 +18,7 @@ class TidewaveMcpTest < Minitest::Test
       @downstream_app,
       allow_remote_access: true,
       project_name: "test-app",
-      browser_control: Tidewave::BrowserControl.new
+      browser_control: Tidewave::BrowserControl.new(cable: { "adapter" => "async" })
     )
   end
 
@@ -339,7 +339,7 @@ class TidewaveMcpTest < Minitest::Test
       allow_remote_access: true,
       project_name: "test-app",
       log_file: __FILE__,
-      browser_control: Tidewave::BrowserControl.new
+      browser_control: Tidewave::BrowserControl.new(cable: { "adapter" => "async" })
     )
 
     status, _headers, body = perform_request(

@@ -24,10 +24,6 @@ class Tidewave
       raise NotImplementedError, "#{self.class} must implement #call"
     end
 
-    def browser_tool?
-      false
-    end
-
     def validate_and_call(arguments, context = {})
       arguments ||= {}
 

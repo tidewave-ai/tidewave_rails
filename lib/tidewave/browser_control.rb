@@ -16,7 +16,7 @@ class Tidewave
   # are routed between MCP request threads and browser connections over Action
   # Cable pub/sub streams:
   #
-  #   * tidewave:clients      - all connected pages (used for discovery)
+  #   * tidewave:clients      - all registered pages (used for discovery)
   #   * tidewave:client:name  - the page registered under name
   #   * tidewave:reply:ref    - replies to a single run_tool command
   #
@@ -43,8 +43,7 @@ class Tidewave
 
     attr_reader :server
 
-    def initialize(cable: nil, logger: nil, ack_timeout: 1.0)
-      cable = { "adapter" => "async" } if cable.nil? || cable.empty?
+    def initialize(cable:, logger: nil, ack_timeout: 1.0)
       @ack_timeout = ack_timeout
       @server = Server.new(cable: cable, logger: logger || ::Logger.new(IO::NULL))
     end
@@ -176,12 +175,6 @@ class Tidewave
         @pending_refs = {}
       end
 
-      def subscribed
-        stream_from(CLIENTS_STREAM, coder: ActiveSupport::JSON) do |message|
-          handle_command(message)
-        end
-      end
-
       def receive(data)
         case data["type"]
         when "hello"
@@ -214,7 +207,13 @@ class Tidewave
         if server.client_registry.register(name, self)
           @name = name
 
+          # Commands, including broadcasts, are only delivered to pages
+          # registered under a name.
           stream_from(BrowserControl.client_stream(name), coder: ActiveSupport::JSON) do |message|
+            handle_command(message)
+          end
+
+          stream_from(CLIENTS_STREAM, coder: ActiveSupport::JSON) do |message|
             handle_command(message)
           end
 
