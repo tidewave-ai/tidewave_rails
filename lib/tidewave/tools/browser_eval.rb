@@ -34,7 +34,7 @@ class Tidewave::Tools::BrowserEval < Tidewave::Tool
             "description" => 'The session to target, e.g. "nice-cactus#1".',
             "type" => "string"
           },
-          "args" => {
+          "action_inputs" => {
             "description" => 'Parameters for the action, as documented by "help".',
             "type" => "object",
             "additionalProperties" => true
