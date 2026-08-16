@@ -5,10 +5,13 @@ require "test_helper"
 class TidewaveMcpTest < Minitest::Test
   DEFAULT_TOOL_NAMES = %w[
     browser_eval
+    create_design_canvas
     get_docs
     get_source_location
     project_eval
   ].freeze
+
+  BROWSER_TOOL_NAMES = %w[ browser_eval create_design_canvas ].freeze
 
   OPTIONAL_TOOL_NAMES = (DEFAULT_TOOL_NAMES + [ "get_logs" ]).sort.freeze
 
@@ -364,7 +367,7 @@ class TidewaveMcpTest < Minitest::Test
 
     assert_equal 200, status
     tools = JSON.parse(body).dig("result", "tools")
-    assert_equal (DEFAULT_TOOL_NAMES - [ "browser_eval" ]).sort, tools.map { |tool| tool["name"] }.sort
+    assert_equal (DEFAULT_TOOL_NAMES - BROWSER_TOOL_NAMES).sort, tools.map { |tool| tool["name"] }.sort
   end
 
   def test_browser_tools_are_not_callable_on_opt_out
