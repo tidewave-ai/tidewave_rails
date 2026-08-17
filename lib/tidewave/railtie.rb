@@ -68,6 +68,10 @@ class Tidewave
             script_src_elem << client_origin unless script_src_elem.include?(client_origin)
           end
 
+          directives["connect-src"].try do |connect_src|
+            connect_src << client_origin unless connect_src.include?(client_origin)
+          end
+
           directives.delete("frame-ancestors")
         end
       end
