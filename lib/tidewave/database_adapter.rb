@@ -20,9 +20,5 @@ class Tidewave
     def execute_query(query, arguments = [])
       raise NotImplementedError, "Subclasses must implement execute_query"
     end
-
-    def get_models
-      raise NotImplementedError, "Subclasses must implement get_models"
-    end
   end
 end

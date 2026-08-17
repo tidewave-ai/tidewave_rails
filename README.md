@@ -82,14 +82,6 @@ Returns output from your running server's log.
 
 Your agent can use it to see what happened after a request. For example, reading the request log and backtrace when something misbehaves, or checking the log after an action to confirm the request came in with the expected params.
 
-### `get_models`
-
-Lists all of your app's models and where each one is defined, by file and line.
-
-[![get_models demo](docs/assets/get_models-poster.png)](https://asciinema.org/a/qeELC7wEgMEI5T7n)
-
-Your agent can use it to map the data domain and find where each model lives before opening files, rather than grepping around for class definitions.
-
 ### `get_source_location`
 
 Returns the file and line where a class, module, or method is defined, across both your app and its dependencies.

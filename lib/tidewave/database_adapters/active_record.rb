@@ -24,10 +24,6 @@ class Tidewave
           database: conn.pool.db_config.database
         }
       end
-
-      def get_models
-        ::ActiveRecord::Base.descendants
-      end
     end
   end
 end

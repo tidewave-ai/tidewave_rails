@@ -76,31 +76,4 @@ class TidewaveDatabaseAdaptersSequelTest < TidewaveSequelTestCase
     assert_equal "SQLITE", response[:adapter]
     assert_nil response[:database]
   end
-
-  def test_get_models_filters_anonymous_models
-    base_model = Sequel::Model(@users_table)
-    named_model = Class.new(base_model)
-    Object.const_set(:TidewaveSequelNamedModel, named_model)
-    filtered_model = Class.new(base_model) do
-      def self.name
-        "Sequel::_Model(#{@users_table.inspect})"
-      end
-    end
-
-    models = @adapter.get_models
-
-    assert_includes models, named_model
-    refute_includes models, filtered_model
-  ensure
-    Object.send(:remove_const, :TidewaveSequelNamedModel) if Object.const_defined?(:TidewaveSequelNamedModel)
-  end
-
-  def test_get_models_keeps_nil_names
-    base_model = Sequel::Model(@users_table)
-    unnamed_model = Class.new(base_model)
-
-    models = @adapter.get_models
-
-    assert_includes models, unnamed_model
-  end
 end
