@@ -35,6 +35,7 @@ module TidewaveRailtieTestApp
       policy.default_src :self
       policy.frame_ancestors :self
       policy.script_src_elem :self
+      policy.connect_src :none
     end
   end
 end

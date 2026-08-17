@@ -31,6 +31,7 @@ class TidewaveRailtieTest < Minitest::Test
     assert_equal [ "'self'" ], directives["default-src"]
     assert_equal [ "'self'", "'unsafe-eval'", "https://example.test" ], directives["script-src"]
     assert_equal [ "'self'", "https://example.test" ], directives["script-src-elem"]
+    assert_equal [ "'none'", "https://example.test" ], directives["connect-src"]
     refute directives.key?("frame-ancestors")
   end
 end
