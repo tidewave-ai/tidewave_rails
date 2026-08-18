@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.9.0 (2026-08-18)
+
+* Add `create_design_canvas` tool
+* Allow requests to tidewave.ai in CSP if toolbar is enabled
+* Remove `get_models` tool
+
 ## v0.8.2 (2026-08-05)
 
 * Use `action_inputs` for `browser_eval`

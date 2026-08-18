@@ -1,7 +1,7 @@
 PATH
   remote: ..
   specs:
-    tidewave (0.8.2)
+    tidewave (0.9.0)
       rack (>= 2.0)
 
 GEM
