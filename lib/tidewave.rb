@@ -361,6 +361,7 @@ class Tidewave
       "tidewave" => config_data(request),
       "root" => @root.to_s,
       "wsl_distro" => ENV["WSL_DISTRO_NAME"],
+      "host_path" => ENV["TIDEWAVE_HOST_PATH"],
       "framework" => {}
     }
 
