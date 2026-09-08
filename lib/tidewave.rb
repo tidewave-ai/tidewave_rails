@@ -76,6 +76,16 @@ class Tidewave
   UPLOAD_ROUTE = "upload".freeze
   WS_ROUTE = "ws".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
+  INSTRUCTIONS = <<~TEXT
+    Tidewave connects you to this Rails application while it is running in development: the same process, database and logs the developer is using. Two things follow. Anything you would run through `rails runner`, `bin/rails console` or `ruby -e` can run inside the already-booted app instead, with no startup cost per call. Questions about the app's actual state (data, logs, loaded code) are answered from the live process rather than inferred from files.
+
+    What is available and when each is relevant:
+    - project_eval: run Ruby inside the running app: models, queries, any expression or snippet. Relevant whenever you would otherwise write a script or start `rails runner` or a console.
+    - execute_sql_query: query the development database directly. Relevant when the answer is in the database (counts, rows, what a record looks like).
+    - get_source_location: where a class, module or method is defined, across the app and every gem, including Rails itself. Relevant when you know the name and would otherwise grep.
+    - get_docs: documentation for a class, module or method, app or dependency, for the exact versions this app has installed.
+    - get_logs: the app's log output from real requests. Relevant when checking what happened during a request (the queries it ran, errors).
+  TEXT
   MAX_UPLOAD_SIZE = 10_000_000
   ALLOWED_UPLOAD_CONTENT_TYPES = [ "image/png", "image/jpeg", "video/webm" ].freeze
   ALLOWED_UPLOAD_TYPES = [ "screenshot", "recording" ].freeze
@@ -573,7 +583,8 @@ class Tidewave
         "name" => "tidewave",
         "version" => VERSION
       },
-      "tools" => tool_definitions(context)
+      "tools" => tool_definitions(context),
+      "instructions" => INSTRUCTIONS
     })
   end
 

@@ -262,6 +262,7 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal "tidewave", payload.dig("result", "serverInfo", "name")
     assert_equal Tidewave::VERSION, payload.dig("result", "serverInfo", "version")
     assert_equal DEFAULT_TOOL_NAMES, payload.dig("result", "tools").map { |tool| tool["name"] }.sort
+    assert_equal Tidewave::INSTRUCTIONS, payload.dig("result", "instructions")
   end
 
   def test_initialize_negotiates_unsupported_protocol_version
