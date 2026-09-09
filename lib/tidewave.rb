@@ -627,7 +627,7 @@ class Tidewave
   end
 
   def tool_definitions(context)
-    context[:tools].values.map(&:definition)
+    context[:tools].values.select(&:include_in_tool_list?).map(&:definition)
   end
 
   def tool_error_result(message)

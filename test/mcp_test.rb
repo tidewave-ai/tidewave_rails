@@ -13,8 +13,6 @@ class TidewaveMcpTest < Minitest::Test
 
   BROWSER_TOOL_NAMES = %w[ browser_eval create_design_canvas ].freeze
 
-  OPTIONAL_TOOL_NAMES = (DEFAULT_TOOL_NAMES + [ "get_logs" ]).sort.freeze
-
   def setup
     @downstream_app = ->(_env) { [ 200, { "Content-Type" => "text/plain" }, [ "demo response" ] ] }
     @app = Tidewave.new(
@@ -337,7 +335,7 @@ class TidewaveMcpTest < Minitest::Test
     assert_equal "Returns the source location for the given reference.\n", get_source_location["description"].lines.first
   end
 
-  def test_tools_list_includes_get_logs_when_log_file_is_configured
+  def test_tools_list_excludes_get_logs_when_log_file_is_configured
     app = Tidewave.new(
       @downstream_app,
       allow_remote_access: true,
@@ -355,7 +353,32 @@ class TidewaveMcpTest < Minitest::Test
 
     assert_equal 200, status
     tools = JSON.parse(body).dig("result", "tools")
-    assert_equal OPTIONAL_TOOL_NAMES, tools.map { |tool| tool["name"] }.sort
+    assert_equal DEFAULT_TOOL_NAMES, tools.map { |tool| tool["name"] }.sort
+  end
+
+  def test_get_logs_remains_callable_when_log_file_is_configured
+    app = Tidewave.new(
+      @downstream_app,
+      allow_remote_access: true,
+      project_name: "test-app",
+      log_file: __FILE__,
+      browser_control: Tidewave::BrowserControl.new(cable: { "adapter" => "async" })
+    )
+
+    status, _headers, body = perform_request(
+      app,
+      path: "/tidewave/mcp",
+      method: "POST",
+      body: JSON.generate({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        id: 1,
+        params: { name: "get_logs", arguments: { tail: 1 } }
+      })
+    )
+
+    assert_equal 200, status
+    assert_equal "end\n", JSON.parse(body).dig("result", "content", 0, "text")
   end
 
   def test_tools_list_excludes_browser_tools_on_opt_out

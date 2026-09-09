@@ -24,6 +24,10 @@ class Tidewave
       raise NotImplementedError, "#{self.class} must implement #call"
     end
 
+    def include_in_tool_list?
+      true
+    end
+
     def validate_and_call(arguments, context = {})
       arguments ||= {}
 

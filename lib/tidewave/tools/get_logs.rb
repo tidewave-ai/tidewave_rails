@@ -58,6 +58,10 @@ class Tidewave::Tools::GetLogs < Tidewave::Tool
     matching_lines.join
   end
 
+  def include_in_tool_list?
+    false
+  end
+
   private
 
   def tail_lines(file_path)

@@ -74,14 +74,6 @@ Looks up the documentation for a class, method, or constant, reading from the ex
 
 Your agent can use it when it's unsure how a class or method works, so the code it generates is grounded in the docs for the exact versions of the gems your app uses, rather than training data that may be stale or a generic docs lookup that can't guarantee it matches the version your app depends on.
 
-### `get_logs`
-
-Returns output from your running server's log.
-
-[![get_logs demo](docs/assets/get_logs-poster.png)](https://asciinema.org/a/1260413)
-
-Your agent can use it to see what happened after a request. For example, reading the request log and backtrace when something misbehaves, or checking the log after an action to confirm the request came in with the expected params.
-
 ### `get_source_location`
 
 Returns the file and line where a class, module, or method is defined, across both your app and its dependencies.
