@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+* Return `instructions` in the MCP initialize response, describing the tools and when each is relevant
+
 ## v0.9.0 (2026-08-18)
 
 * Add `create_design_canvas` tool
