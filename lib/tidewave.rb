@@ -77,7 +77,7 @@ class Tidewave
   WS_ROUTE = "ws".freeze
   PROTOCOL_VERSION = "2025-03-26".freeze
   INSTRUCTIONS = <<~TEXT
-    Tidewave connects you to this Rails application while it is running in development: the same process, database and logs the developer is using. Two things follow. Anything you would run through `rails runner`, `bin/rails console` or `ruby -e` can run inside the already-booted app instead, with no startup cost per call. Questions about the app's actual state (data, loaded code, etc) are answered from the live process rather than inferred from files.
+    Tidewave connects you to this Rails application while it is running in development: the same process, database and logs the developer is using. Anything you would run through `rails runner` or `ruby -e` can run inside the already-booted app instead, with no startup cost per call. Questions about the app's actual state (data, loaded code, etc) are answered from the live process rather than inferred from files.
 
     What is available and when each is relevant:
     - project_eval: run Ruby inside the running app: models, queries, any expression or snippet. Relevant whenever you would otherwise write a script or start `rails runner` or a console.
