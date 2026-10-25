@@ -1,8 +1,9 @@
 # CHANGELOG
 
-## Unreleased
+## v0.9.1 (2026-10-25)
 
 * Return `instructions` in the MCP initialize response, describing the tools and when each is relevant
+* Do not include `get_logs` in default tool listing
 
 ## v0.9.0 (2026-08-18)
 
