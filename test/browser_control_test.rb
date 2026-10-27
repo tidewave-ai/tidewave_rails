@@ -7,6 +7,10 @@ class TidewaveBrowserControlTest < Minitest::Test
     @control = Tidewave::BrowserControl.new(cable: { "adapter" => "async" }, ack_timeout: 0.2)
   end
 
+  def test_channels_reach_the_server_through_their_connection
+    assert Tidewave::BrowserControl::Connection.public_method_defined?(:server)
+  end
+
   def test_run_with_invalid_sid
     assert_equal [ :error, :invalid_sid ], @control.run("nosuffix", "browser_eval", {}, 1_000)
     assert_equal [ :error, :invalid_sid ], @control.run("#1", "browser_eval", {}, 1_000)
@@ -199,25 +203,15 @@ class TidewaveBrowserControlChannelTest < Minitest::Test
 
   private
 
-  # Stands in for ActionCable::Connection::Base, implementing the surface
-  # the channel uses, so channel logic can be exercised without a socket.
-  class StubConnection
-    attr_reader :server, :transmissions
+  # The real connection with transmissions captured instead of written to
+  # a socket, so channel logic can be exercised against the actual
+  # Action Cable connection surface (including method visibility).
+  class StubConnection < Tidewave::BrowserControl::Connection
+    attr_reader :transmissions
 
     def initialize(server)
-      @server = server
+      super(server, Rack::MockRequest.env_for("/"))
       @transmissions = Queue.new
-    end
-
-    def identifiers = []
-    def pubsub = server.pubsub
-    def worker_pool = server.worker_pool
-    def config = server.config
-
-    # The worker pool tags the connection logger around handlers, so it
-    # must be a TaggedLoggerProxy like on a real connection.
-    def logger
-      @logger ||= ActionCable::Connection::TaggedLoggerProxy.new(server.logger, tags: [])
     end
 
     def transmit(cable_message)

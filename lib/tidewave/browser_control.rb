@@ -164,6 +164,9 @@ class Tidewave
     end
 
     class Connection < ActionCable::Connection::Base
+      # Newer Rails makes Connection::Base#server private, while the channel
+      # reaches the server (registry and broadcasts) through its connection.
+      public :server
     end
 
     # Handles a single control page connection.
